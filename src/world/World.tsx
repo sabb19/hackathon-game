@@ -1552,8 +1552,6 @@ export default function World({ mode }: { mode: WorldMode }) {
     <div className="absolute inset-0">
       {fontsReady && (
         <Canvas
-          // nel titolo la scena 3D non si vede: non si disegna (risparmio di GPU)
-          frameloop={mode === 'title' ? 'never' : 'always'}
           shadows
           // risoluzione fissa (mai variabile: i cambi di risoluzione facevano sfarfallare le luci)
           dpr={high ? Math.min(1.5, window.devicePixelRatio || 1) : 1}
