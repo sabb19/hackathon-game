@@ -22,6 +22,7 @@ export interface Settings {
   crt: boolean
   volume: number
   markers: boolean
+  quality?: 'high' | 'low' // alta: risoluzione 1.5x, occlusione ambientale, bagliore; bassa: per PC lenti
 }
 
 export interface Progress {

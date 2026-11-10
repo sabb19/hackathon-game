@@ -60,7 +60,6 @@ export default function TitleScreen() {
           <br />
           Session
         </h1>
-        <p className="font-display font-bold uppercase tracking-[0.25em] text-[18px] text-cream/80 mt-4">Level B2 · 23:41</p>
       </div>
 
       {/* etichetta dell'oggetto sotto il mouse */}

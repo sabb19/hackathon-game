@@ -1,5 +1,7 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Html, Stats } from '@react-three/drei'
+import { Html, RoundedBox, Stats } from '@react-three/drei'
+import { Bloom, EffectComposer, N8AO, SMAA, ToneMapping } from '@react-three/postprocessing'
+import { ToneMappingMode } from 'postprocessing'
 import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
@@ -82,8 +84,9 @@ function Hit({ id, children, position, rotation }: { id: InteractId; children: R
         mesh.userData.ownMat = c
       }
       const m2 = mesh.material as THREE.MeshStandardMaterial
+      // evidenziazione discreta: deve dire "si può usare", non colorare l'oggetto
       m2.emissive.set(active ? '#E8823A' : '#000000')
-      m2.emissiveIntensity = active ? 0.14 : 1
+      m2.emissiveIntensity = active ? 0.06 : 1
     })
   }, [active])
   return (
@@ -93,11 +96,17 @@ function Hit({ id, children, position, rotation }: { id: InteractId; children: R
   )
 }
 
-const Box = ({ p, s, m, r, cast }: { p: V3; s: V3; m: THREE.Material; r?: V3; cast?: boolean }) => (
-  <mesh position={p} rotation={r} material={m} castShadow={cast} receiveShadow>
-    <boxGeometry args={s} />
-  </mesh>
-)
+// Scatola con spigoli smussati (niente spigoli vivi "da low poly"); sotto i 2 cm resta un box semplice.
+const Box = ({ p, s, m, r, cast }: { p: V3; s: V3; m: THREE.Material; r?: V3; cast?: boolean }) => {
+  const min = Math.min(...s)
+  if (min < 0.02)
+    return (
+      <mesh position={p} rotation={r} material={m} castShadow={cast} receiveShadow>
+        <boxGeometry args={s} />
+      </mesh>
+    )
+  return <RoundedBox args={s} radius={Math.min(0.012, min / 3)} smoothness={2} position={p} rotation={r} material={m} castShadow={cast} receiveShadow />
+}
 
 function Label({ lines, p, r, w, h, opts }: { lines: string[]; p: V3; r?: V3; w: number; h: number; opts?: Parameters<typeof textTexture>[1] }) {
   const tex = useMemo(() => textTexture(lines, opts), [lines.join('|'), JSON.stringify(opts)])
@@ -227,6 +236,10 @@ function Player({ mode }: { mode: WorldMode }) {
   // solo sviluppo: posiziona la camera da console per controlli visivi
   useEffect(() => {
     if (!import.meta.env.DEV) return
+    ;(window as unknown as Record<string, unknown>).__titleCam = (pos: V3, look: V3) => {
+      TITLE_POS.set(...pos)
+      TITLE_LOOK.set(...look)
+    }
     ;(window as unknown as Record<string, unknown>).__look = (x: number, z: number, yw: number, pt = 0) => {
       camera.position.set(x, 1.6, z)
       yaw.current = yw
@@ -1499,6 +1512,7 @@ export default function World({ mode }: { mode: WorldMode }) {
   const [fontsReady, setFontsReady] = useState(false)
   const [locked, setLocked] = useState(false)
   const note = useGame((s) => s.note)
+  const high = useGame((s) => s.settings.quality !== 'low')
   // solo sviluppo: P mostra il contatore dei fotogrammi
   const [stats, setStats] = useState(false)
   useEffect(() => {
@@ -1522,11 +1536,28 @@ export default function World({ mode }: { mode: WorldMode }) {
   return (
     <div className="absolute inset-0">
       {fontsReady && (
-        <Canvas shadows dpr={1} camera={{ fov: 70, near: 0.1, far: 60, position: TITLE_POS.toArray() }} gl={{ antialias: true }} onCreated={({ gl }) => (gl.toneMapping = THREE.ACESFilmicToneMapping)}>
+        <Canvas
+          shadows
+          // risoluzione fissa (mai variabile: i cambi di risoluzione facevano sfarfallare le luci)
+          dpr={high ? Math.min(1.5, window.devicePixelRatio || 1) : 1}
+          camera={{ fov: 70, near: 0.1, far: 60, position: TITLE_POS.toArray() }}
+          gl={{ antialias: !high, powerPreference: 'high-performance' }}
+          onCreated={({ gl }) => (gl.toneMapping = high ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping)}
+          key={high ? 'hq' : 'lq'}
+        >
           <Suspense fallback={null}>
             <Scene mode={mode} />
           </Suspense>
           {stats && <Stats />}
+          {/* resa alta: ombre di contatto morbide (occlusione ambientale), bagliore di luci e schermi, bordi lisci */}
+          {high && (
+            <EffectComposer multisampling={0} disableNormalPass>
+              <N8AO halfRes aoRadius={0.9} intensity={2.2} distanceFalloff={0.6} quality="medium" color="#05070a" />
+              <Bloom mipmapBlur intensity={0.55} luminanceThreshold={0.85} luminanceSmoothing={0.2} />
+              <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+              <SMAA />
+            </EffectComposer>
+          )}
         </Canvas>
       )}
       {mode === 'play' && !locked && !note && (

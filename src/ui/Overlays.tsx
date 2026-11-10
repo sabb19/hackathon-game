@@ -96,6 +96,12 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <input type="range" min={0} max={1} step={0.05} value={s.volume} onChange={(e) => upd({ volume: +e.target.value })} className="accent-[#E8823A]" />
       </Row>
       <div className="kicker text-[14px] mt-6 mb-1">Grafica</div>
+      <Row label="Qualità grafica (bassa se il gioco va a scatti)">
+        <select value={s.quality ?? 'high'} onChange={(e) => upd({ quality: e.target.value as 'high' | 'low' })} className="bg-transparent border border-ink/30 px-2 py-1 text-[14px]">
+          <option value="high">Alta</option>
+          <option value="low">Bassa</option>
+        </select>
+      </Row>
       <div className="kicker text-[14px] mt-6 mb-1">Accessibilità</div>
       <Row label="Indicatore dell'obiettivo nel mondo">
         <input type="checkbox" checked={s.markers !== false} onChange={(e) => upd({ markers: e.target.checked })} className="accent-[#E8823A] w-4 h-4" />
