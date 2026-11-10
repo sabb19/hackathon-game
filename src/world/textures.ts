@@ -234,3 +234,30 @@ export function noticeBoardTexture() {
     ])
   })
 }
+
+// Laminato effetto rovere: venature lunghe e chiare, leggero rumore (piani delle scrivanie)
+let woodCache: THREE.CanvasTexture | null = null
+export function woodTexture() {
+  if (woodCache) return woodCache
+  woodCache = canvasTex(1024, 512, (g) => {
+    g.fillStyle = '#b8946a'
+    g.fillRect(0, 0, 1024, 512)
+    let seed = 7
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
+    for (let i = 0; i < 140; i++) {
+      const y = rnd() * 512
+      const a = 0.04 + rnd() * 0.09
+      g.strokeStyle = rnd() > 0.5 ? `rgba(120,86,52,${a})` : `rgba(226,198,160,${a})`
+      g.lineWidth = 1 + rnd() * 3
+      g.beginPath()
+      g.moveTo(0, y)
+      for (let x = 0; x <= 1024; x += 64) g.lineTo(x, y + Math.sin(x * 0.004 + i) * 6 + (rnd() - 0.5) * 3)
+      g.stroke()
+    }
+    for (let i = 0; i < 6000; i++) {
+      g.fillStyle = `rgba(90,60,30,${rnd() * 0.05})`
+      g.fillRect(rnd() * 1024, rnd() * 512, 2, 1)
+    }
+  }, [1, 1])
+  return woodCache
+}

@@ -98,7 +98,7 @@ export const VIEWS: Record<string, { pos: V3; look: V3 }> = {
   computer: { pos: [PLAYER_DESK.x, 1.25, PLAYER_DESK.z + 0.55], look: [PLAYER_DESK.x, 1.08, PLAYER_DESK.z - 0.15] },
   door: { pos: [-13.25, 1.3, 8.45], look: [-13.9, 1.25, 8.45] },
   display: { pos: [-12.4, 2.0, 9.6], look: [-12.4, 2.0, 10.92] },
-  adaDesk: { pos: [-12.75, 1.4, -1.7], look: [-12.08, 0.6, -1.715] },
+  adaDesk: { pos: [-12.45, 1.3, -1.62], look: [-11.8, 0.55, -1.62] },
   adaPhoto: { pos: [-12.3, 1.62, -3.1], look: [-12.3, 1.62, -3.92] },
   adaCalendar: { pos: [-10.6, 1.5, -3.05], look: [-10.6, 1.5, -3.92] },
   whiteboard: { pos: [WHITEBOARD.x, 1.6, 6.0], look: [WHITEBOARD.x, 1.55, 7.92] },

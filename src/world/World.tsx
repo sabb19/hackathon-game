@@ -7,7 +7,7 @@ import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { useGame } from '../store/game'
 import { inspectAction, interact, type InteractId } from './interact'
-import { carpetTexture, ceilingTexture, cityTexture, noticeBoardTexture, plasterTexture, textTexture } from './textures'
+import { carpetTexture, ceilingTexture, cityTexture, noticeBoardTexture, plasterTexture, textTexture, woodTexture } from './textures'
 import { stepIndex, targetFor, unlockLevel } from '../content/steps'
 import { lockPointer } from './pointer'
 import { sfx } from '../audio'
@@ -443,6 +443,25 @@ const SLOT = {
   rightBack: [0.8, 0.79, -0.26] as V3,
   rightFront: [0.8, 0.79, 0.26] as V3,
 }
+// Scrivania da open space (modello Blender desk2): piano in rovere, telaio antracite, cassettiera su ruote.
+function DeskModel({ drawerOpen = false }: { drawerOpen?: boolean }) {
+  return (
+    <CustomModel
+      name="desk2"
+      deps={[drawerOpen]}
+      tweak={(o) => {
+        if (o.name === 'Cassetto') o.position.z = drawerOpen ? 0.28 : 0
+        const mm = o as THREE.Mesh
+        const mat = mm.material as THREE.MeshStandardMaterial | undefined
+        if (mm.isMesh && mat?.name === 'Laminato rovere' && !mat.map) {
+          mat.map = woodTexture()
+          mat.color.set('#ffffff')
+          mat.needsUpdate = true
+        }
+      }}
+    />
+  )
+}
 const PENCILCUP = ['stationery_supplies_pencilcup']
 const PLANT = ['potted_plant_02_pot', 'potted_plant_02_leaves', 'potted_plant_02_dirt']
 type Persona = 'tidy' | 'messy' | 'empty' | 'plant' | 'boss' | 'none'
@@ -451,14 +470,8 @@ function Desk({ p, ry = 0, monitor = true, partition = true, persona = 'tidy', d
   const chairZ = persona === 'empty' || persona === 'tidy' ? 0.62 : 0.85
   return (
     <group position={p} rotation={[0, ry, 0]}>
-      <Model
-        id="metal_office_desk"
-        deps={[drawerOpen]}
-        tweak={(o) => {
-          if (o.name.endsWith('drawer_04')) o.position.z += drawerOpen ? 0.28 : 0
-        }}
-      />
-      {partition && <CustomModel name="partition" position={[0, 0, -0.5]} />}
+      <DeskModel drawerOpen={drawerOpen} />
+      {partition && <CustomModel name="screen2" />}
       {monitor && <group position={[0, 0.79, -0.15]}><CrtModel dark={!saver} saver={saver} /></group>}
       <Chair p={[0.05, 0, chairZ]} ry={Math.PI + chairTurn} />
       {monitor && <CustomModel name="powerstrip" position={[0.3, 0, -0.2]} />}
@@ -512,8 +525,8 @@ function PlayerDesk({ m, lockdown, mode }: { m: Mats; lockdown: boolean; mode: W
   const postit = useMemo(() => textTexture([p?.username ?? 'utente', 'Halden2019'], { w: 256, h: 256, bg: '#ecd66f', color: '#2a2722', font: '700 40px Caveat', pad: 22, lineHeight: 1.35 }), [p?.username])
   return (
     <group position={[L.PLAYER_DESK.x, 0, L.PLAYER_DESK.z]}>
-      <Model id="metal_office_desk" />
-      <CustomModel name="partition" position={[0, 0, -0.5]} />
+      <DeskModel />
+      <CustomModel name="screen2" />
       <Hit id="computer" position={[0, 0.79, -0.15]}>
         <CrtModel live />
       </Hit>
@@ -638,7 +651,7 @@ function AdaDesk({ m }: { m: Mats }) {
       </Hit>
       {/* il taccuino nel cassetto */}
       {open && !taken && (
-        <group position={[-0.715, 0.63, 0.58]} rotation={[0, 0.15, 0]}>
+        <group position={[-0.62, 0.548, 0.27]} rotation={[0, 0.15, 0]}>
           <mesh castShadow><boxGeometry args={[0.17, 0.022, 0.23]} /><meshStandardMaterial color="#2B4A6B" roughness={0.8} /></mesh>
           <mesh position={[0, 0.0115, 0]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[0.15, 0.2]} /><meshStandardMaterial map={nb} /></mesh>
         </group>
@@ -649,8 +662,8 @@ function AdaDesk({ m }: { m: Mats }) {
         <Model id="standing_picture_frame_01" rotation={[0, -Math.PI / 2, 0]} scale={1.2} />
       </group>
       {/* lucchetto a codice sul cassetto: LED rosso chiuso, verde aperto */}
-      <group position={[-0.715, 0.7, open ? 0.785 : 0.505]}>
-        <mesh><boxGeometry args={[0.07, 0.09, 0.02]} /><meshStandardMaterial color="#2a2e33" roughness={0.4} metalness={0.5} /></mesh>
+      <group position={[-0.62, 0.548, open ? 0.585 : 0.305]}>
+        <mesh><boxGeometry args={[0.06, 0.07, 0.02]} /><meshStandardMaterial color="#2a2e33" roughness={0.4} metalness={0.5} /></mesh>
         <mesh position={[0.022, 0.032, 0.011]}><planeGeometry args={[0.012, 0.012]} /><meshStandardMaterial color={open ? '#6FBF8E' : '#D9644A'} emissive={open ? '#6FBF8E' : '#D9644A'} emissiveIntensity={2.5} /></mesh>
         <mesh position={[0, -0.01, 0.011]}><planeGeometry args={[0.05, 0.05]} /><meshStandardMaterial color="#c9c4b6" /></mesh>
       </group>
