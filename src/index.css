@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: #1a1b1d;
+  color: #e8e2d2;
+  overflow: hidden;
+}
+/* la radice è fissa: un focus automatico non può più far scorrere tutta la pagina */
+#root {
+  position: fixed;
+  inset: 0;
+  overflow: clip;
+}
+
+body {
+  font-family: 'Inter Tight', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.big-text {
+  font-size: 112%;
+}
+
+/* Effetto CRT del desktop RELAY */
+.crt::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.12) 0 1px, transparent 1px 3px);
+  box-shadow: inset 0 0 140px rgba(0, 0, 0, 0.65);
+  z-index: 50;
+}
+
+@keyframes soft-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.boot { animation: soft-in 0.25s ease-out; }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.fade-up { animation: fade-up 0.35s ease-out both; }
+
+@keyframes blink { 50% { opacity: 0; } }
+.cursor-blink { animation: blink 1s steps(1) infinite; }
+
+.btn {
+  @apply inline-flex items-center gap-2 px-5 py-2 bg-ink text-cream border-2 border-cream/80 font-display font-bold uppercase tracking-wider text-lg leading-none transition-colors;
+}
+.btn:hover:not(:disabled) { @apply bg-signal text-ink border-signal; }
+.btn:disabled { @apply opacity-40 cursor-not-allowed; }
+.btn-signal { @apply bg-signal text-ink border-signal; }
+.btn-signal:hover:not(:disabled) { @apply bg-cream text-ink; }
+
+/* voce di menu: segnaletica con freccia */
+.menu-item {
+  @apply flex items-center gap-3 text-left font-display font-black uppercase text-3xl leading-none text-cream/75 transition-all py-1.5;
+}
+.menu-item::after { content: '→'; @apply opacity-0 -translate-x-2 transition-all text-signal; }
+.menu-item:hover:not(:disabled) { @apply text-cream; }
+.menu-item:hover:not(:disabled)::after { @apply opacity-100 translate-x-0; }
+.menu-item:disabled { @apply text-cream/25 cursor-not-allowed; }
+
+/* etichetta "segnaletica": numero arancione + striscia crema */
+.sign-num { @apply bg-signal text-ink font-display font-black leading-none px-2.5 py-1; }
+.sign-strip { @apply bg-cream text-ink font-sans font-semibold; }
+.kicker { @apply font-display font-bold uppercase tracking-[0.18em] text-signal; }
+
+@keyframes buzz {
+  0%, 86%, 100% { transform: translateX(0); }
+  88% { transform: translateX(-3px) rotate(-1deg); }
+  90% { transform: translateX(3px) rotate(1deg); }
+  92% { transform: translateX(-3px) rotate(-1deg); }
+  94% { transform: translateX(3px) rotate(1deg); }
+}
+.phone-buzz { animation: buzz 2.2s infinite; }
+
+/* ---------- RELAY OS: direzione C, segnaletica ---------- */
+.r-plastic { background: #e8e2d2; box-shadow: 0 0 0 2px #1a1b1d, 0 18px 50px rgba(0,0,0,0.45); }
+.r-bevel {
+  background: #e8e2d2; color: #1a1b1d; border: 2px solid #1a1b1d;
+  font-family: 'Big Shoulders Display', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  transition: background 0.12s, color 0.12s;
+}
+.r-bevel:hover:not(:disabled) { background: #1a1b1d; color: #e8e2d2; }
+.r-bevel:active, .r-bevel.on { background: #1a1b1d; color: #e8e2d2; }
+.r-sunken { box-shadow: inset 0 0 0 2px #1a1b1d; }
+.r-ridges { background-image: repeating-linear-gradient(135deg, #e8823a 0 6px, transparent 6px 12px); }
+.r-screen { background: #2e3134; }
+.r-grid {
+  background-image: linear-gradient(rgba(232,226,210,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(232,226,210,0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.r-phosphor { color: #ffb36b; }
