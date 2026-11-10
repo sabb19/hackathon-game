@@ -3,91 +3,114 @@ import { useGame } from '../store/game'
 import { STEPS } from '../content/steps'
 import { Panel, SettingsPanel } from '../ui/Overlays'
 import Notebook from '../ui/Notebook'
-import type { TitleItem } from '../world/World'
+import { sfx } from '../audio'
 
-// Title screen diegetica: il menu sono gli oggetti sulla scrivania.
-// badge = nuovo turno · monitor = continua · taccuino = archivio · telefono = impostazioni · tazza = crediti
+// Titolo: lo schermo di RELAY in primo piano, nel buio dell'ufficio. Il menu è dentro lo schermo, come un login.
+// Tastiera: ↑ ↓ per scegliere, Invio per confermare. Anche il mouse funziona.
 type Sub = null | 'settings' | 'archive' | 'credits' | 'confirmNew'
+type Item = 'continue' | 'new' | 'archive' | 'settings' | 'credits'
 
-const ITEMS: { id: TitleItem; label: string; hint: string }[] = [
-  { id: 'monitor', label: 'Continua il turno', hint: 'il monitor' },
-  { id: 'badge', label: 'Nuovo turno', hint: 'il badge' },
-  { id: 'notebook', label: 'Archivio', hint: 'il taccuino' },
-  { id: 'phone', label: 'Impostazioni', hint: 'il telefono' },
-  { id: 'mug', label: 'Crediti', hint: 'la tazza' },
-]
+const BOOT = ['RELAY OS 4.2 · Halden Netcare', 'postazione di sorveglianza B2-14', 'collegamento a SECURITY-01 … ok', 'sessione pronta']
 
 export default function TitleScreen() {
   const progress = useGame((s) => s.progress)
   const archive = useGame((s) => s.archive)
   const [sub, setSub] = useState<Sub>(null)
-  const [hover, setHover] = useState<TitleItem | null>(null)
   const canContinue = !!progress && progress.step !== 'end' && progress.step !== 'm0_arrive' // solo una partita vera
+  const items: { id: Item; label: string }[] = [
+    ...(canContinue ? [{ id: 'continue' as Item, label: 'Continua il turno' }] : []),
+    { id: 'new', label: 'Nuovo turno' },
+    { id: 'archive', label: 'Archivio' },
+    { id: 'settings', label: 'Impostazioni' },
+    { id: 'credits', label: 'Crediti' },
+  ]
+  const [sel, setSel] = useState(0)
+  const [boot, setBoot] = useState(0)
 
-  const pick = (id: TitleItem) => {
-    if (id === 'monitor') {
-      if (!canContinue) return
+  useEffect(() => {
+    if (boot >= BOOT.length + 1) return
+    const t = setTimeout(() => setBoot((b) => b + 1), boot === 0 ? 300 : 380)
+    return () => clearTimeout(t)
+  }, [boot])
+
+  const pick = (id: Item) => {
+    sfx.click()
+    if (id === 'continue') {
       useGame.getState().setView('world')
       useGame.getState().setScreen('game')
     }
-    if (id === 'badge') return canContinue ? setSub('confirmNew') : useGame.getState().setScreen('intro')
-    if (id === 'notebook') setSub('archive')
-    if (id === 'phone') setSub('settings')
-    if (id === 'mug') setSub('credits')
+    if (id === 'new') return canContinue ? setSub('confirmNew') : useGame.getState().setScreen('intro')
+    if (id === 'archive') setSub('archive')
+    if (id === 'settings') setSub('settings')
+    if (id === 'credits') setSub('credits')
   }
 
   useEffect(() => {
-    const onPick = (e: Event) => !sub && pick((e as CustomEvent).detail)
-    const onHover = (e: Event) => setHover((e as CustomEvent).detail)
-    window.addEventListener('title-pick', onPick)
-    window.addEventListener('title-hover', onHover)
-    return () => {
-      window.removeEventListener('title-pick', onPick)
-      window.removeEventListener('title-hover', onHover)
-      document.body.style.cursor = ''
+    const k = (e: KeyboardEvent) => {
+      if (sub) return
+      if (e.key === 'ArrowDown') setSel((i) => (i + 1) % items.length)
+      if (e.key === 'ArrowUp') setSel((i) => (i - 1 + items.length) % items.length)
+      if (e.key === 'Enter') pick(items[sel].id)
     }
+    window.addEventListener('keydown', k)
+    return () => window.removeEventListener('keydown', k)
   })
 
-  const items = ITEMS.filter((i) => i.id !== 'monitor' || canContinue)
-  const h = items.find((i) => i.id === hover)
+  const ready = boot > BOOT.length
 
   return (
-    <div className="absolute inset-0 z-20 pointer-events-none">
-      {/* titolo */}
-      <div className="absolute left-10 top-10 boot">
-        <h1 className="font-display font-black uppercase text-[112px] leading-[0.98] tracking-[0.02em] text-cream drop-shadow-[0_6px_40px_rgba(0,0,0,0.85)]">
-          The Last
-          <br />
-          Session
-        </h1>
-      </div>
-
-      {/* etichetta dell'oggetto sotto il mouse */}
-      <div className="absolute left-1/2 bottom-28 -translate-x-1/2 h-14">
-        {h ? (
-          <div key={h.id} className="fade-up flex items-stretch">
-            <span className="bg-cream text-ink font-display font-black uppercase text-3xl px-4 py-1.5">{h.label}</span>
+    <div className="absolute inset-0 z-20 overflow-hidden" style={{ background: 'radial-gradient(900px 600px at 12% 8%, rgba(232,130,58,0.16), transparent 60%), #06080b' }}>
+      {/* bordo della scrivania in basso, appena visibile */}
+      <div className="absolute inset-x-0 bottom-0 h-[14%] bg-gradient-to-t from-[#1a140e] to-transparent" />
+      {/* il monitor */}
+      <div className="absolute left-1/2 top-[47%] -translate-x-1/2 -translate-y-1/2 w-[min(1180px,88vw)] aspect-[16/9]">
+        <div className="absolute inset-0 rounded-[14px] bg-[#0d0f12] p-[1.4%] shadow-[0_40px_120px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.06)]">
+          <div className="relative w-full h-full overflow-hidden rounded-[4px] bg-[#0b1420]">
+            {/* contenuto dello schermo */}
+            <div className="absolute inset-0 px-[6%] py-[5%] flex flex-col text-[#cfe0f0]">
+              <div className="font-mono text-[clamp(11px,1.05vw,15px)] text-[#7f98b2] space-y-1 min-h-[6.5em]">
+                {BOOT.slice(0, boot).map((l, i) => (
+                  <div key={i}>
+                    <span className="text-[#6FBF8E]">✓</span> {l}
+                  </div>
+                ))}
+              </div>
+              <h1 className={`font-display font-black uppercase leading-[0.92] text-cream mt-[3%] transition-opacity duration-700 ${ready ? 'opacity-100' : 'opacity-0'}`} style={{ fontSize: 'clamp(48px, 7.4vw, 112px)', textShadow: '0 0 24px rgba(159,192,216,0.25)' }}>
+                The Last Session
+              </h1>
+              <nav aria-label="Menu principale" className={`mt-[4%] font-mono text-[clamp(15px,1.55vw,22px)] space-y-[0.35em] transition-opacity duration-700 ${ready ? 'opacity-100' : 'opacity-0'}`}>
+                {items.map((it, i) => (
+                  <button
+                    key={it.id}
+                    onMouseEnter={() => setSel(i)}
+                    onFocus={() => setSel(i)}
+                    onClick={() => pick(it.id)}
+                    className={`block text-left outline-none ${sel === i ? 'text-signal' : 'text-[#cfe0f0]/75 hover:text-cream'}`}
+                  >
+                    <span className="inline-block w-[1.4em]">{sel === i ? '>' : ''}</span>
+                    {it.label}
+                    {sel === i && <span className="inline-block w-[0.6em] h-[1em] align-[-0.12em] ml-1 bg-signal animate-pulse" />}
+                    {it.id === 'continue' && progress && <span className="ml-4 text-[0.7em] text-[#7f98b2]">{STEPS[progress.step].chapter}</span>}
+                  </button>
+                ))}
+              </nav>
+              <div className="mt-auto flex justify-between font-mono text-[clamp(10px,0.9vw,13px)] text-[#7f98b2]/80">
+                <span>↑ ↓ per scegliere · Invio per confermare</span>
+                <span>Halden Netcare · uso riservato al personale</span>
+              </div>
+            </div>
+            {/* vetro: righe di scansione, vignettatura, riflesso della lampada */}
+            <div className="absolute inset-0 pointer-events-none opacity-[0.07] bg-[repeating-linear-gradient(0deg,#000_0_1px,transparent_1px_3px)]" />
+            <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%)' }} />
+            <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(420px 260px at 8% 6%, rgba(255,200,140,0.10), transparent 70%), linear-gradient(115deg, rgba(255,255,255,0.05) 0%, transparent 35%)' }} />
           </div>
-        ) : (
-          <p className="font-display font-bold uppercase tracking-wider text-[16px] text-cream/70 bg-ink/60 px-3 py-1">Clicca gli oggetti sulla scrivania</p>
-        )}
+        </div>
+        {/* piede del monitor */}
+        <div className="absolute left-1/2 -translate-x-1/2 top-full w-[10%] h-[7%] bg-gradient-to-b from-[#121418] to-[#0a0b0d]" />
+        <div className="absolute left-1/2 -translate-x-1/2 top-[107%] w-[26%] h-[2.2%] rounded-sm bg-[#0e1013] shadow-[0_10px_30px_rgba(0,0,0,0.8)]" />
+        {/* LED di accensione */}
+        <div className="absolute right-[3%] bottom-[0.45%] w-[6px] h-[6px] rounded-full bg-[#6FBF8E] shadow-[0_0_8px_#6FBF8E]" />
       </div>
-
-      {/* menu testuale: alternativa accessibile da tastiera */}
-      <nav aria-label="Menu principale" className="absolute left-10 bottom-10 pointer-events-auto flex flex-wrap gap-x-6 gap-y-2">
-        {items.map((i) => (
-          <button
-            key={i.id}
-            onClick={() => pick(i.id)}
-            onMouseEnter={() => setHover(i.id)}
-            onMouseLeave={() => setHover(null)}
-            className={`text-left font-display font-black uppercase text-[24px] leading-none transition-colors focus:outline focus:outline-2 focus:outline-signal px-1 ${hover === i.id ? 'text-signal' : 'text-cream/80 hover:text-cream'}`}
-          >
-            {i.label}
-            {i.id === 'monitor' && progress && <span className="block font-sans normal-case font-medium text-[12px] text-cream/55 mt-1">{STEPS[progress.step].chapter}</span>}
-          </button>
-        ))}
-      </nav>
 
       <div className="pointer-events-auto">
         {sub === 'settings' && <SettingsPanel onClose={() => setSub(null)} />}
