@@ -59,9 +59,9 @@ export const CALLS: Record<CallId, (name: string) => CallNode[]> = {
       ],
     },
     {
-      text: 'Ho appena aperto l\'ufficio di Ada, quello a vetri sul lato ovest. Nel cassetto della scrivania c\'è il suo taccuino: spiega come funziona la nostra rete.',
+      text: 'Ho appena aperto l\'ufficio di Ada, quello a vetri sul lato ovest. Nel cassetto della scrivania c\'è il suo taccuino: spiega come funziona la nostra rete. Il cassetto però ha un lucchetto a codice, e il codice lo sapeva solo lei.',
       replies: [
-        { label: 'Vado a prenderlo.', answer: 'Poi accedi al tuo PC con le credenziali del post-it. Ti seguo dalle telecamere.' },
+        { label: 'Come lo apro?', answer: 'Ada era abitudinaria: usava sempre cose a cui teneva. Guardati intorno nel suo ufficio. Poi accedi al tuo PC con le credenziali del post-it.' },
       ],
     },
   ],

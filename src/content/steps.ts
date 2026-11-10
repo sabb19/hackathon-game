@@ -64,7 +64,8 @@ export const STEPS: Record<StepId, Step> = {
       { flag: 'loggedIn', label: 'Accedi al tuo computer' },
     ],
     hints: [
-      "L'ufficio di Ada è quello a vetri sul lato ovest dell'open space. Il taccuino è nel cassetto della scrivania.",
+      "L'ufficio di Ada è quello a vetri sul lato ovest dell'open space. Il cassetto della scrivania ha un codice di 4 cifre: guarda la foto e il calendario sul muro.",
+      'Il codice di Ada: il compleanno del suo gatto, giorno e mese (4 cifre).',
       'Per il PC: guarda il post-it giallo sul monitor, poi siediti al computer.',
     ],
   },

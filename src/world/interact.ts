@@ -13,7 +13,7 @@ const beforeLock = (step: Parameters<typeof stepIndex>[0]) => stepIndex(step) < 
 export type InteractId =
   | 'computer' | 'postit' | 'door' | 'display' | 'adaDesk' | 'adaPhoto' | 'whiteboard' | 'rack' | 'cabinet' | 'window' | 'cooler'
   | 'board' | 'coffee' | 'adaBox'
-  | 'lightSwitch'
+  | 'lightSwitch' | 'adaCalendar'
   | 'door_ada' | 'door_server' | 'door_tech' | 'door_meeting' | 'door_teo' | 'door_exit'
 
 const DOOR_IDS = ['door_ada', 'door_server', 'door_tech', 'door_meeting', 'door_teo', 'door_exit'] as const
@@ -31,7 +31,7 @@ const LOCKED_LINE: Record<DoorHit, string> = {
 }
 const told = new Set<string>()
 
-function inspectAt(id: InteractId, action?: string) {
+export function inspectAt(id: InteractId, action?: string) {
   const v = VIEWS[id]
   if (!v) return
   sfx.click()
@@ -47,7 +47,8 @@ export function promptFor(id: InteractId): string | null {
     case 'postit': return 'Guarda il post-it'
     case 'door': return p.step === 'm0_coffee' || p.step === 'm0_stairs' ? 'Passa il badge' : 'Guarda il lettore badge'
     case 'display': return 'Guarda il display'
-    case 'adaDesk': return p.flags.notebook ? 'Guarda la scrivania' : 'Apri il cassetto'
+    case 'adaDesk': return p.flags.notebook ? 'Guarda la scrivania' : p.flags.adaDrawerOpen ? 'Prendi il taccuino' : 'Cassetto chiuso a codice'
+    case 'adaCalendar': return 'Guarda il calendario'
     case 'adaPhoto': return 'Guarda la foto'
     case 'whiteboard': return 'Guarda la lavagna'
     case 'rack': return 'Guarda il rack'
@@ -94,8 +95,15 @@ export function interact(id: InteractId) {
     case 'display':
       return inspectAt('display')
     case 'adaDesk':
-      g.setFlag('adaDrawerOpen')
-      return inspectAt('adaDesk', p.flags.notebook ? undefined : 'Prendi il taccuino')
+      // il cassetto è chiuso con un lucchetto a codice: minigioco (ui/Keypad)
+      if (!p.flags.adaDrawerOpen && step === 'm0_login') {
+        sfx.click()
+        g.setMinigame('keypad')
+        return
+      }
+      return inspectAt('adaDesk', p.flags.notebook || !p.flags.adaDrawerOpen ? undefined : 'Prendi il taccuino')
+    case 'adaCalendar':
+      return inspectAt('adaCalendar')
     case 'adaPhoto':
       return inspectAt('adaPhoto')
     case 'whiteboard':

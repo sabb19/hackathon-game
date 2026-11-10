@@ -13,6 +13,7 @@ import Desktop from './os/Desktop'
 import Watch from './os/Watch'
 import ChapterCard from './ui/ChapterCard'
 import RackCable from './ui/RackCable'
+import Keypad from './ui/Keypad'
 import { stepIndex } from './content/steps'
 import Loading from './ui/Loading'
 import Notification from './ui/Notification'
@@ -45,6 +46,7 @@ export default function App() {
       {inGame && view === 'desktop' && (prologue ? <Watch /> : <Desktop />)}
       {inGame && <ChapterCard />}
       {inGame && minigame === 'rackCable' && <RackCable />}
+      {inGame && minigame === 'keypad' && <Keypad />}
       {inGame && !callOrSkip && !(prologue && view === 'desktop') && <Phone />}
       {inGame && <Notification />}
       {inGame && <GameNotebook />}

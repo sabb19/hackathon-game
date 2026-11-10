@@ -632,9 +632,15 @@ function AdaDesk({ m }: { m: Mats }) {
       )}
       <CustomModel name="deadplant" position={[0.72, 0.79, -0.22]} />
       <Model id="binder_notebook" pick={['binder_notebook_closed']} position={[-0.62, 0.79, 0.2]} rotation={[0, -0.15, 0]} />
-      <Hit id="adaPhoto" position={[0.25, 0.79, -0.3]}>
+      <group position={[0.25, 0.79, -0.3]}>
         <Model id="standing_picture_frame_01" rotation={[0, -Math.PI / 2, 0]} scale={1.2} />
-      </Hit>
+      </group>
+      {/* lucchetto a codice sul cassetto: LED rosso chiuso, verde aperto */}
+      <group position={[-0.715, 0.7, open ? 0.785 : 0.505]}>
+        <mesh><boxGeometry args={[0.07, 0.09, 0.02]} /><meshStandardMaterial color="#2a2e33" roughness={0.4} metalness={0.5} /></mesh>
+        <mesh position={[0.022, 0.032, 0.011]}><planeGeometry args={[0.012, 0.012]} /><meshStandardMaterial color={open ? '#6FBF8E' : '#D9644A'} emissive={open ? '#6FBF8E' : '#D9644A'} emissiveIntensity={2.5} /></mesh>
+        <mesh position={[0, -0.01, 0.011]}><planeGeometry args={[0.05, 0.05]} /><meshStandardMaterial color="#c9c4b6" /></mesh>
+      </group>
       <Mug position={[0.45, 0.79, 0.2]} label={mug} />
       <CustomModel name="nameplate" position={[-0.2, 0.79, -0.36]} rotation={[0, Math.PI, 0]} />
     </group>
@@ -852,6 +858,87 @@ function Shutters({ lockdown, level }: { lockdown: boolean; level: number }) {
 
 const POTTED = ['potted_plant_02_pot', 'potted_plant_02_leaves', 'potted_plant_02_dirt']
 
+// La foto di Pixel, il gatto di Ada (con la data scritta a mano: l'indizio del codice)
+function adaCatPhoto() {
+  const c = document.createElement('canvas')
+  c.width = 512
+  c.height = 416
+  const g = c.getContext('2d')!
+  g.fillStyle = '#f4efe3'
+  g.fillRect(0, 0, 512, 416)
+  // la foto: un gatto sul davanzale, controluce
+  const gr = g.createLinearGradient(0, 24, 0, 320)
+  gr.addColorStop(0, '#e9b779')
+  gr.addColorStop(1, '#a8654a')
+  g.fillStyle = gr
+  g.fillRect(24, 24, 464, 296)
+  g.fillStyle = '#5a3a2e'
+  g.fillRect(24, 260, 464, 60)
+  g.fillStyle = '#2b2220'
+  g.beginPath()
+  g.ellipse(250, 225, 78, 48, 0, 0, Math.PI * 2) // corpo
+  g.fill()
+  g.beginPath()
+  g.ellipse(318, 168, 42, 38, 0, 0, Math.PI * 2) // testa
+  g.fill()
+  g.beginPath()
+  g.moveTo(290, 140); g.lineTo(298, 104); g.lineTo(316, 134); g.closePath()
+  g.moveTo(330, 132); g.lineTo(346, 100); g.lineTo(354, 140); g.closePath()
+  g.fill()
+  g.lineWidth = 14
+  g.strokeStyle = '#2b2220'
+  g.beginPath()
+  g.moveTo(176, 238); g.quadraticCurveTo(120, 230, 132, 180)
+  g.stroke()
+  // didascalia a mano
+  g.fillStyle = '#1d3a63'
+  g.font = '700 46px Caveat'
+  g.fillText('Pixel — nato il 4 dicembre', 40, 384)
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
+}
+// Calendario fermo a maggio: l'ultimo mese di Ada in ufficio
+function adaCalendar() {
+  const c = document.createElement('canvas')
+  c.width = 420
+  c.height = 600
+  const g = c.getContext('2d')!
+  g.fillStyle = '#f4efe3'
+  g.fillRect(0, 0, 420, 600)
+  g.fillStyle = '#2B4A6B'
+  g.fillRect(0, 0, 420, 120)
+  g.fillStyle = '#f4efe3'
+  g.font = '900 64px "Big Shoulders Display"'
+  g.fillText('MAGGIO', 30, 88)
+  g.font = '500 22px "JetBrains Mono"'
+  g.fillStyle = '#1a1b1d'
+  const days = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
+  days.forEach((d, i) => g.fillText(d, 34 + i * 54, 160))
+  // maggio con l'1 di giovedì
+  for (let d = 1; d <= 31; d++) {
+    const idx = d + 2
+    const col = idx % 7
+    const row = Math.floor(idx / 7)
+    g.fillText(String(d), 30 + col * 54, 210 + row * 62)
+  }
+  // ultimo giorno cerchiato
+  g.strokeStyle = '#b4442e'
+  g.lineWidth = 4
+  g.beginPath()
+  g.arc(30 + 5 * 54 + 12, 210 + 4 * 62 - 8, 26, 0, Math.PI * 2)
+  g.stroke()
+  g.fillStyle = '#b4442e'
+  g.font = '700 34px Caveat'
+  g.fillText('ultimo giorno!', 150, 560)
+  g.fillStyle = '#1d3a63'
+  g.font = '700 30px Caveat'
+  g.fillText('ricordarsi: crocchette Pixel', 24, 512)
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
+}
+
 // Armadio metallico a 4 cassetti (archivio, uffici). open = un cassetto lasciato aperto.
 const FC_BODY = new THREE.MeshStandardMaterial({ color: '#8f959b', roughness: 0.45, metalness: 0.55 })
 const FC_DRAWER = new THREE.MeshStandardMaterial({ color: '#a3a9af', roughness: 0.4, metalness: 0.5 })
@@ -1041,6 +1128,8 @@ function Building({ mode }: { mode: WorldMode }) {
   const wb = useMemo(() => textTexture(['GIORNI SENZA INCIDENTI:  0', '', '[UFFICI]—sw—ROUTER—sw—[SERVER]', '', '"due quartieri, un ponte" — A.'], { w: 1024, h: 512, bg: '#eeeeea', color: '#1d3a63', font: '700 52px Caveat', pad: 36, lineHeight: 1.25 }), [])
   const tvTex = useMemo(() => textTexture(['RIUNIONE DI LUNEDÌ', '', 'Sicurezza Q3: 0 incidenti!', '(speriamo)'], { w: 512, h: 288, bg: '#10233a', color: '#cfe0f0', font: '600 34px "Inter Tight"', pad: 30, lineHeight: 1.3 }), [])
   const PD = L.PLAYER_DESK
+  const catPhoto = useMemo(() => adaCatPhoto(), [])
+  const calendar = useMemo(() => adaCalendar(), [])
   const pillarMat = useMemo(() => new THREE.MeshStandardMaterial({ map: plasterTexture(0.6, 1.3), roughness: 0.9 }), [])
   const cabinetMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#d8d4ca', roughness: 0.55 }), [])
   const cabinetDoor = useMemo(() => new THREE.MeshStandardMaterial({ color: '#e4e0d6', roughness: 0.5 }), [])
@@ -1132,6 +1221,15 @@ function Building({ mode }: { mode: WorldMode }) {
       <FilingCabinet p={[-13, 0, -3.62]} />
       <Plant p={[-8.7, 0, 1.4]} s={1.1} m={m} />
       <pointLight position={[-11, 2.9, -1]} color="#ffe2b8" intensity={lockdown ? 0.3 : 0.7} distance={7} decay={1.6} />
+
+      {/* Parete dell'ufficio di Ada: la foto del gatto e il calendario fermo all'ultimo mese */}
+      <Hit id="adaPhoto" position={[-12.3, 1.62, -3.915]}>
+        <mesh material={m.black}><boxGeometry args={[0.46, 0.38, 0.025]} /></mesh>
+        <mesh position={[0, 0, 0.014]}><planeGeometry args={[0.42, 0.34]} /><meshStandardMaterial map={catPhoto} roughness={0.6} /></mesh>
+      </Hit>
+      <Hit id="adaCalendar" position={[-10.6, 1.5, -3.92]}>
+        <mesh><planeGeometry args={[0.42, 0.6]} /><meshStandardMaterial map={calendar} roughness={0.9} /></mesh>
+      </Hit>
 
       {/* SALA RIUNIONI (cap. 4) */}
       <CustomModel name="meetingtable" position={[-9.5, 0, -8]} />
