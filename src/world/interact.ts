@@ -1,5 +1,7 @@
 import { useGame } from '../store/game'
 import { sfx } from '../audio'
+import { VIEWS } from './layout'
+import { doorOpen } from './Level'
 
 // Interazioni con l'ambiente: niente schede di testo.
 // La storia la raccontano gli oggetti: E avvicina la telecamera all'oggetto ("ispezione"),
@@ -7,24 +9,22 @@ import { sfx } from '../audio'
 export type InteractId =
   | 'computer' | 'postit' | 'door' | 'display' | 'adaDesk' | 'adaPhoto' | 'whiteboard' | 'rack' | 'cabinet' | 'window' | 'cooler'
   | 'board' | 'coffee' | 'adaBox'
+  | 'door_ada' | 'door_server' | 'door_tech' | 'door_meeting' | 'door_teo' | 'door_exit'
 
-type V3 = [number, number, number]
+const DOOR_IDS = ['door_ada', 'door_server', 'door_tech', 'door_meeting', 'door_teo', 'door_exit'] as const
+type DoorHit = (typeof DOOR_IDS)[number]
+const isDoorHit = (id: InteractId): id is DoorHit => (DOOR_IDS as readonly string[]).includes(id)
 
-// Inquadrature di ispezione (coordinate del mondo): da dove guardare, verso dove.
-export const VIEWS: Partial<Record<InteractId, { pos: V3; look: V3 }>> = {
-  postit: { pos: [0.22, 1.24, 2.22], look: [0.205, 1.195, 1.878] },
-  computer: { pos: [0, 1.25, 2.55], look: [0, 1.08, 1.85] },
-  door: { pos: [7.25, 1.35, 4.25], look: [7.97, 1.25, 4.25] },
-  display: { pos: [6.7, 2.0, 4.6], look: [7.96, 2.1, 4.6] },
-  adaDesk: { pos: [-7.75, 1.4, -5.2], look: [-6.98, 0.6, -5.21] },
-  adaPhoto: { pos: [-6.75, 1.05, -4.25], look: [-6.12, 0.9, -4.25] },
-  whiteboard: { pos: [-2, 1.6, -7.9], look: [-2, 1.55, -9.95] },
-  rack: { pos: [4.0, 1.4, -8.25], look: [4.0, 1.2, -9.0] },
-  cabinet: { pos: [6.45, 1.3, -8.0], look: [6.6, 0.75, -9.2] },
-  board: { pos: [0.6, 1.5, 4.85], look: [0.6, 1.5, 5.97] },
-  coffee: { pos: [4.05, 1.5, 4.7], look: [4.05, 1.25, 5.6] },
-  adaBox: { pos: [-4.0, 1.25, -8.55], look: [-4.0, 0.25, -9.4] },
+// Cosa dice Teo la prima volta che provi una porta chiusa.
+const LOCKED_LINE: Record<DoorHit, string> = {
+  door_ada: "L'ufficio di Ada è chiuso da quando è andata in pensione. Da qui non posso aprirlo… non ancora.",
+  door_server: 'La sala server si apre solo quando la rete torna su. Un passo alla volta.',
+  door_tech: 'Il locale tecnico? Lì dentro solo scope e vecchi armadi. Lascia stare.',
+  door_meeting: 'Sala riunioni chiusa. Ci arriviamo.',
+  door_teo: 'Il mio ufficio. Niente sbirciatine!',
+  door_exit: "L'uscita è bloccata dal lockdown. Per ora.",
 }
+const told = new Set<string>()
 
 function inspectAt(id: InteractId, action?: string) {
   const v = VIEWS[id]
@@ -52,6 +52,8 @@ export function promptFor(id: InteractId): string | null {
     case 'board': return 'Guarda la bacheca'
     case 'coffee': return 'Guarda la macchina del caffè'
     case 'adaBox': return 'Guarda lo scatolone'
+    default:
+      return isDoorHit(id) && !doorOpen(id.slice(5) as never, p.step) ? 'Porta chiusa' : null
   }
 }
 
@@ -110,6 +112,13 @@ export function interact(id: InteractId) {
     case 'coffee':
     case 'adaBox':
       return inspectAt(id)
+    default:
+      if (!isDoorHit(id) || doorOpen(id.slice(5) as never, step)) return
+      sfx.denied()
+      if (!told.has(id)) {
+        told.add(id)
+        g.say('teo', LOCKED_LINE[id])
+      }
   }
 }
 

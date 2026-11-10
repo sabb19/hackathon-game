@@ -477,7 +477,7 @@ export function CrtModel({ live = false, dark = false, saver = false }: { live?:
 
 // Modelli fatti da noi in Blender (GLB in public/assets/models/custom/).
 for (const n of ['phone', 'chair', 'rack', 'cabinet', 'mug', 'door', 'shutter', 'cooler', 'whiteboard', 'coatrack', 'partition', 'railing', 'stairs', 'deadplant', 'nameplate', 'smartphone', 'copier', 'kitchen', 'meetingtable', 'tv', 'board', 'adabox', 'pizzabox', 'papercup', 'headphones', 'powerstrip', 'stickies']) useGLTF.preload(`/assets/models/custom/${n}.glb`)
-export function CustomModel({ name, position, rotation, scale = 1, tweak, deps = [] }: { name: string; position?: V3; rotation?: V3; scale?: number; tweak?: (o: THREE.Object3D) => void; deps?: unknown[] }) {
+export function CustomModel({ name, position, rotation, scale = 1, tweak, deps = [] }: { name: string; position?: V3; rotation?: V3; scale?: number | V3; tweak?: (o: THREE.Object3D) => void; deps?: unknown[] }) {
   const { scene } = useGLTF(`/assets/models/custom/${name}.glb`)
   const obj = useMemo(() => {
     const root = scene.clone(true)

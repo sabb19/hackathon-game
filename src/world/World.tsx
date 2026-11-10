@@ -5,46 +5,27 @@ import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { useGame } from '../store/game'
 import { inspectAction, interact, type InteractId } from './interact'
-import { carpetTexture, ceilingTexture, cityTexture, concreteTexture, noticeBoardTexture, plasterTexture, textTexture } from './textures'
+import { carpetTexture, ceilingTexture, cityTexture, noticeBoardTexture, textTexture } from './textures'
 import { stepIndex, targetFor, unlockLevel } from '../content/steps'
 import { lockPointer } from './pointer'
 import { sfx } from '../audio'
 import { CrtModel, CustomModel, Model, Mug, usePBR } from './assets'
+import * as L from './layout'
+import { Door, Walls, currentColliders } from './Level'
 
 export type WorldMode = 'title' | 'play' | 'idle'
 type V3 = [number, number, number]
 
-// ---------- layout (metri) ----------
-// Open space: x -8..8, z -10..6, altezza 7. Sala server vetrata: x 3..8, z -10..-5. Corridoio oltre la porta: x > 8.
-const BOUNDS = { minX: -7.6, maxX: 7.6, minZ: -9.6, maxZ: 5.6 }
-const COLLIDERS: [number, number, number, number][] = [
-  // [minX, maxX, minZ, maxZ]
-  [-5.05, 1.05, 0.5, 2.5], // prima fila di scrivanie (a banco)
-  [-5.05, 1.05, -3.9, -1.9], // seconda fila
-  [-6.9, -5.9, -5.5, -3.5], // scrivania di Ada
-  [2.9, 3.1, -10, -5], // vetrata sala server (lato)
-  [4.8, 8, -5.1, -4.9], // vetrata (fronte, a destra della porta)
-  [3, 3.6, -5.1, -4.9], // vetrata (a sinistra della porta)
-  [3.4, 7.8, -10, -8.8], // rack + armadio
-  [-6.8, 2.6, -10, -9.3], // archivi e lavagna sul muro di fondo
-  [7.0, 8, 0.5, 1.3], // distributore
-  [7.0, 8, 5.0, 6], // attaccapanni
-  [3.35, 3.45, -3.6, -2.4], // sala riunioni: vetrata ovest (porta tra z -2.4 e -1.4)
-  [3.35, 3.45, -1.4, -0.4],
-  [3.4, 7.6, -0.45, -0.35], // vetrata nord
-  [3.4, 7.6, -3.65, -3.55], // vetrata sud
-  [4.4, 6.8, -2.6, -1.4], // tavolo riunioni
-  [2.0, 4.6, 5.25, 6], // angolo caffè
-  [2.05, 2.75, 1.15, 1.85], // stampante
-]
-const START = new THREE.Vector3(0, 1.6, 3.6)
-const TITLE_POS = new THREE.Vector3(0.55, 1.5, 3.0)
-const TITLE_LOOK = new THREE.Vector3(0.0, 0.8, 2.1)
+// ---------- pianta: tutte le coordinate vengono da layout.ts ----------
+const BOUNDS = { minX: -13.7, maxX: 13.7, minZ: -11.7, maxZ: 10.7 }
+const START = new THREE.Vector3(...L.START)
+const TITLE_POS = new THREE.Vector3(...L.TITLE_POS)
+const TITLE_LOOK = new THREE.Vector3(...L.TITLE_LOOK)
 
 function useMats() {
   const wall = usePBR('precast_concrete_wall', 1.4, 0.7, { normalScale: new THREE.Vector2(0.5, 0.5) })
   const wallDark = usePBR('precast_concrete_wall', 1, 0.5, { color: '#8d9095', normalScale: new THREE.Vector2(0.5, 0.5) })
-  const floor = usePBR('smooth_concrete_floor', 6, 6, { roughness: 0.55, color: '#9aa2ab' })
+  const floor = usePBR('smooth_concrete_floor', 10, 8, { roughness: 0.55, color: '#9aa2ab' })
   return useMemo(() => {
     const m = (color: string, roughness = 0.7, metalness = 0) => new THREE.MeshStandardMaterial({ color, roughness, metalness })
     return {
@@ -123,26 +104,6 @@ function Label({ lines, p, r, w, h, opts }: { lines: string[]; p: V3; r?: V3; w:
   )
 }
 
-// Parete in cemento: la texture mantiene la stessa scala (un pannello ogni ~3 m) su pareti di qualsiasi misura.
-function Wall({ p, r, w, h, dark }: { p: V3; r?: V3; w: number; h: number; dark?: boolean }) {
-  const mat = usePBR('precast_concrete_wall', w / 3.2, h / 3.2, { normalScale: new THREE.Vector2(0.45, 0.45), ...(dark ? { color: '#8d9095' } : {}) })
-  return (
-    <mesh position={p} rotation={r} material={mat} receiveShadow>
-      <planeGeometry args={[w, h]} />
-    </mesh>
-  )
-}
-
-// Parete intonacata e tinteggiata (grigio caldo), texture in scala reale.
-function Plaster({ p, r, w, h }: { p: V3; r?: V3; w: number; h: number }) {
-  const mat = useMemo(() => new THREE.MeshStandardMaterial({ map: plasterTexture(w / 2.5, h / 2.5), roughness: 0.92 }), [w, h])
-  return (
-    <mesh position={p} rotation={r} material={mat} receiveShadow>
-      <planeGeometry args={[w, h]} />
-    </mesh>
-  )
-}
-
 // Moquette a quadrotte da 50 cm sotto le zone di lavoro.
 function Carpet({ p, w, d }: { p: [number, number]; w: number; d: number }) {
   const mat = useMemo(() => new THREE.MeshStandardMaterial({ map: carpetTexture(w, d), roughness: 1 }), [w, d])
@@ -153,93 +114,74 @@ function Carpet({ p, w, d }: { p: [number, number]; w: number; d: number }) {
   )
 }
 
-// Controsoffitto a pannelli 60 cm; luci incassate, una su tre accesa (luce di cortesia notturna).
+// Controsoffitto a pannelli 60 cm su tutto il piano; plafoniere 120×60 lontane dai muri, una su tre accesa.
+const CEIL_X = [-12.5, -9.5, -6.5, -3, 0.5, 3.5, 6.5, 9.5, 12.5]
+const CEIL_Z = [-10.5, -8, -5.5, -2.5, 0.5, 3.5, 6.5, 9.5]
 function Ceiling() {
-  const mat = useMemo(() => new THREE.MeshStandardMaterial({ map: ceilingTexture(16 / 0.6, 16 / 0.6), roughness: 0.95 }), [])
-  const lights: { x: number; z: number; on: boolean }[] = []
-  let k = 0
-  for (let x = -6; x <= 6; x += 3)
-    for (let z = -8.4; z <= 4.8; z += 2.4) lights.push({ x, z, on: k++ % 3 === 0 })
+  const mat = useMemo(() => new THREE.MeshStandardMaterial({ map: ceilingTexture(28 / 0.6, 23 / 0.6), roughness: 0.95 }), [])
+  const on = useRef<THREE.InstancedMesh>(null)
+  const off = useRef<THREE.InstancedMesh>(null)
+  const cells = useMemo(() => {
+    const a: { x: number; z: number; on: boolean }[] = []
+    let k = 0
+    for (const x of CEIL_X) for (const z of CEIL_Z) a.push({ x, z, on: k++ % 3 === 0 })
+    return a
+  }, [])
+  const nOn = cells.filter((c) => c.on).length
+  useEffect(() => {
+    const o = new THREE.Object3D()
+    let i = 0
+    let j = 0
+    for (const c of cells) {
+      o.position.set(c.x, L.CEILING - 0.01, c.z)
+      o.rotation.set(Math.PI / 2, 0, 0)
+      o.updateMatrix()
+      if (c.on) on.current?.setMatrixAt(i++, o.matrix)
+      else off.current?.setMatrixAt(j++, o.matrix)
+    }
+    if (on.current) on.current.instanceMatrix.needsUpdate = true
+    if (off.current) off.current.instanceMatrix.needsUpdate = true
+  }, [cells])
   return (
     <group>
-      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 4.2, -2]} material={mat}><planeGeometry args={[16, 16]} /></mesh>
-      {lights.map((l, i) => (
-        <mesh key={i} rotation={[Math.PI / 2, 0, 0]} position={[l.x, 4.19, l.z]}>
-          <planeGeometry args={[0.6, 1.2]} />
-          <meshStandardMaterial color={l.on ? '#fff6e6' : '#b9bcbf'} emissive={l.on ? '#fff1d6' : '#000000'} emissiveIntensity={l.on ? 0.35 : 0} />
-        </mesh>
-      ))}
-      {/* bocchette dell'aria */}
-      {[-4.5, 1.5].map((x) => [-6, 0].map((z) => (
-        <mesh key={`v${x}${z}`} rotation={[Math.PI / 2, 0, 0]} position={[x, 4.19, z]}><planeGeometry args={[0.5, 0.5]} /><meshStandardMaterial color="#6f7276" /></mesh>
-      )))}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, L.CEILING, -0.5]} material={mat}><planeGeometry args={[28, 23]} /></mesh>
+      <instancedMesh ref={on} args={[undefined, undefined, nOn]} frustumCulled={false}>
+        <planeGeometry args={[1.2, 0.6]} />
+        <meshStandardMaterial color="#fff6e6" emissive="#fff1d6" emissiveIntensity={0.35} />
+      </instancedMesh>
+      <instancedMesh ref={off} args={[undefined, undefined, cells.length - nOn]} frustumCulled={false}>
+        <planeGeometry args={[1.2, 0.6]} />
+        <meshStandardMaterial color="#b9bcbf" />
+      </instancedMesh>
     </group>
   )
 }
 
 // Veneziane a metà finestra: la luna passa tra le lamelle e disegna righe sul pavimento.
-function Blinds({ z }: { z: number }) {
+function Blinds({ x, z, rotY }: { x: number; z: number; rotY: number }) {
   const ref = useRef<THREE.InstancedMesh>(null)
-  const N = 22
+  const N = 20
   useEffect(() => {
     const m = ref.current
     if (!m) return
     const o = new THREE.Object3D()
     for (let i = 0; i < N; i++) {
-      o.position.set(0, 3.75 - i * 0.055, 0)
+      o.position.set(0, 2.8 - i * 0.055, 0)
       o.rotation.set(0, 0, 0.55)
       o.updateMatrix()
       m.setMatrixAt(i, o.matrix)
     }
     m.instanceMatrix.needsUpdate = true
   }, [])
+  const south = rotY === 0
+  const rail = useMemo(() => new THREE.MeshStandardMaterial({ color: '#b8b5ad' }), [])
   return (
-    <group position={[-7.76, 0, z]}>
-      <instancedMesh ref={ref} args={[undefined, undefined, N]} castShadow>
+    <group position={south ? [x, 0, z - 0.24] : [x + 0.24, 0, z]} rotation={[0, south ? Math.PI / 2 : 0, 0]}>
+      <instancedMesh ref={ref} args={[undefined, undefined, N]} castShadow frustumCulled={false}>
         <boxGeometry args={[0.05, 0.004, 2.22]} />
         <meshStandardMaterial color="#c9c6bd" roughness={0.6} />
       </instancedMesh>
-      <Box p={[0, 3.8, 0]} s={[0.07, 0.05, 2.26]} m={new THREE.MeshStandardMaterial({ color: '#b8b5ad' })} />
-    </group>
-  )
-}
-
-// Sala riunioni a vetri: tavolo, sei sedie, schermo in standby. Porta sul lato ovest.
-function MeetingRoom({ m }: { m: Mats }) {
-  const band = useMemo(() => new THREE.MeshStandardMaterial({ color: '#e9ecef', transparent: true, opacity: 0.55, roughness: 0.9, depthWrite: false }), [])
-  const tvTex = useMemo(() => textTexture(['RIUNIONE DI LUNEDÌ', '', 'Sicurezza Q3: 0 incidenti!', '(speriamo)'], { w: 512, h: 288, bg: '#10233a', color: '#cfe0f0', font: '600 34px "Inter Tight"', pad: 30, lineHeight: 1.3 }), [])
-  const glass = (p: V3, r: V3, w: number) => (
-    <group position={p} rotation={r}>
-      <mesh material={m.glass}><planeGeometry args={[w, 2.6]} /></mesh>
-      <mesh position={[0, -0.0, 0.002]} material={band}><planeGeometry args={[w, 0.35]} /></mesh>
-      <Box p={[0, 1.3, 0]} s={[w, 0.05, 0.05]} m={m.metal} />
-      <Box p={[0, -1.3, 0]} s={[w, 0.04, 0.05]} m={m.metal} />
-    </group>
-  )
-  return (
-    <group>
-      {glass([5.5, 1.3, -0.4], [0, 0, 0], 4.2)}
-      {glass([5.5, 1.3, -3.6], [0, 0, 0], 4.2)}
-      {glass([3.4, 1.3, -3.0], [0, Math.PI / 2, 0], 1.2)}
-      {glass([3.4, 1.3, -0.9], [0, Math.PI / 2, 0], 1.0)}
-      {[3.4, 7.6].map((x) => [-0.4, -3.6].map((z) => <Box key={`${x}${z}`} p={[x, 1.3, z]} s={[0.06, 2.6, 0.06]} m={m.metal} />))}
-      <Box p={[3.4, 2.62, -1.9]} s={[0.06, 0.05, 1.0]} m={m.metal} />
-      <Label lines={['SALA RIUNIONI']} p={[3.38, 2.2, -1.9]} r={[0, -Math.PI / 2, 0]} w={0.9} h={0.18} opts={{ w: 512, h: 100, color: '#1a1b1d', font: '800 80px "Big Shoulders Display"', align: 'center' }} />
-      <CustomModel name="meetingtable" position={[5.6, 0, -2.0]} />
-      {[4.8, 5.6, 6.4].map((x) => <Chair key={`a${x}`} p={[x, 0, -2.75]} ry={0.05 * (x - 5.6)} />)}
-      {[4.8, 5.6, 6.4].map((x) => <Chair key={`b${x}`} p={[x, 0, -1.25]} ry={Math.PI + 0.08 * (x - 5.6)} />)}
-      <CustomModel
-        name="tv"
-        position={[7.95, 0, -2.0]}
-        rotation={[0, -Math.PI / 2, 0]}
-        tweak={(o) => {
-          const mm = o as THREE.Mesh
-          if (mm.isMesh && o.name === 'TvScreen') {
-            tvTex.flipY = false
-            mm.material = new THREE.MeshStandardMaterial({ map: tvTex, emissiveMap: tvTex, emissive: '#ffffff', emissiveIntensity: 0.35 })
-          }
-        }}
-      />
+      <Box p={[0, 2.85, 0]} s={[0.07, 0.05, 2.26]} m={rail} />
     </group>
   )
 }
@@ -364,10 +306,10 @@ function Player({ mode }: { mode: WorldMode }) {
     // scena del lockdown: la camera si gira verso le finestre mentre scendono le serrande
     if (g.cinematic) {
       const t = (performance.now() - g.cinematic) / 1000
-      const targetYaw = Math.PI / 2 + Math.round((yaw.current - Math.PI / 2) / (Math.PI * 2)) * Math.PI * 2
+      const targetYaw = L.LOCK_YAW + Math.round((yaw.current - L.LOCK_YAW) / (Math.PI * 2)) * Math.PI * 2
       const k2 = Math.min(1, dt * (t < 4.2 ? 1.6 : 0))
       yaw.current += (targetYaw - yaw.current) * k2
-      pitch.current += (0.32 - pitch.current) * k2
+      pitch.current += (0.12 - pitch.current) * k2
       camera.quaternion.setFromEuler(new THREE.Euler(pitch.current, yaw.current, 0, 'YXZ'))
       fx.shake *= Math.pow(0.02, dt)
       camera.position.y = 1.6 + (Math.random() - 0.5) * fx.shake
@@ -415,7 +357,8 @@ function Player({ mode }: { mode: WorldMode }) {
       fwd.set(-Math.sin(yaw.current), 0, -Math.cos(yaw.current))
       right.set(Math.cos(yaw.current), 0, -Math.sin(yaw.current))
       const v = fwd.multiplyScalar(iz).add(right.multiplyScalar(ix)).normalize().multiplyScalar((k.ShiftLeft ? 3.6 : 2.4) * Math.min(dt, 0.05))
-      const blocked = (x: number, z: number) => COLLIDERS.some(([a, b, c, d]) => x > a - 0.28 && x < b + 0.28 && z > c - 0.28 && z < d + 0.28)
+      const cols = currentColliders()
+      const blocked = (x: number, z: number) => cols.some(([a, b, c, d]) => x > a - 0.28 && x < b + 0.28 && z > c - 0.28 && z < d + 0.28)
       const p = camera.position
       const nx = THREE.MathUtils.clamp(p.x + v.x, BOUNDS.minX, BOUNDS.maxX)
       if (!blocked(nx, p.z)) p.x = nx
@@ -547,7 +490,7 @@ function PlayerDesk({ m, lockdown, mode }: { m: Mats; lockdown: boolean; mode: W
   )
   const postit = useMemo(() => textTexture([p?.username ?? 'utente', 'Halden2019'], { w: 256, h: 256, bg: '#ecd66f', color: '#2a2722', font: '700 40px Caveat', pad: 22, lineHeight: 1.35 }), [p?.username])
   return (
-    <group position={[0, 0, 2]}>
+    <group position={[L.PLAYER_DESK.x, 0, L.PLAYER_DESK.z]}>
       <Model id="metal_office_desk" />
       <CustomModel name="partition" position={[0, 0, -0.5]} />
       <Hit id="computer" position={[0, 0.79, -0.15]}>
@@ -628,7 +571,7 @@ function TitleProps({ m }: { m: Mats }) {
   }, [])
   const lift = (id: TitleItem) => (hover === id ? 0.025 : 0)
   return (
-    <group position={[0, 0, 2]}>
+    <group position={[L.PLAYER_DESK.x, 0, L.PLAYER_DESK.z]}>
       {/* oggetti un po' più grandi del vero: devono leggersi come voci di menu */}
       {/* monitor = continua */}
       <mesh position={[0, 1.08, -0.14]} {...ev('monitor')}>
@@ -668,7 +611,7 @@ function AdaDesk({ m }: { m: Mats }) {
   const nb = useMemo(() => textTexture(['A.F.'], { w: 128, h: 160, bg: '#2B4A6B', color: '#E8DFC9', font: '700 40px Caveat', pad: 18 }), [])
   // la scrivania guarda la sala: Ada sedeva con le finestre alle spalle
   return (
-    <group position={[-6.4, 0, -4.5]} rotation={[0, -Math.PI / 2, 0]}>
+    <group position={[L.ADA_DESK.x, 0, L.ADA_DESK.z]} rotation={[0, -Math.PI / 2, 0]}>
       <Hit id="adaDesk">
         <Desk p={[0, 0, 0]} m={m} monitor={false} partition={false} persona="none" drawerOpen={open} />
       </Hit>
@@ -716,6 +659,27 @@ function RackLeds({ plugged, sandbox }: { plugged: boolean; sandbox: boolean }) 
   return <>{out}</>
 }
 
+// LED dei rack "di contorno": una texture condivisa al posto di decine di mesh per rack.
+function rackLedTexture() {
+  const c = document.createElement('canvas')
+  c.width = 128
+  c.height = 512
+  const g = c.getContext('2d')!
+  for (let row = 0; row < 6; row++)
+    for (let col = 0; col < 8; col++) {
+      const r = Math.sin(row * 12.9 + col * 78.2) * 43758.5
+      const v = r - Math.floor(r)
+      g.fillStyle = v > 0.93 ? '#E8823A' : v > 0.35 ? '#6FBF8E' : '#1d3326'
+      g.fillRect(6 + col * 15, 512 - (16 + row * 84), 9, 5)
+    }
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
+}
+
+// Sala server: due file di rack contrapposte (corridoio caldo in mezzo), pavimento flottante, condizionatore.
+const RACK_XS = Array.from({ length: 10 }, (_, i) => 0.9 + i * 0.7)
+const RACK_B_INDEX = 3 // x = 3.0 = L.RACK_B.x
 function ServerRoom({ m }: { m: Mats }) {
   const step = useGame((s) => s.progress?.step ?? 'm0_coffee')
   const flags = useGame((s) => s.progress?.flags ?? {})
@@ -724,47 +688,68 @@ function ServerRoom({ m }: { m: Mats }) {
   const sandbox = si >= stepIndex('m2_monitor')
   const open = !!flags.foundSandbox
   const sbLabel = useMemo(() => textTexture(['SANDBOX-7', 'ESERCITAZIONE', '— A.F.'], { w: 256, h: 128, bg: '#efe6c8', color: '#222', font: '500 26px "JetBrains Mono"', pad: 10 }), [])
+  const ledMat = useMemo(() => {
+    const t = rackLedTexture()
+    return new THREE.MeshStandardMaterial({ map: t, emissiveMap: t, emissive: '#ffffff', emissiveIntensity: 1.3, transparent: true })
+  }, [])
+  const tiles = useMemo(() => new THREE.MeshStandardMaterial({ map: ceilingTexture(15 / 0.6, 8 / 0.6), color: '#a3aab2', roughness: 0.6 }), [])
+  const crac = useMemo(() => new THREE.MeshStandardMaterial({ color: '#c9c8c1', roughness: 0.6 }), [])
+  const cable = useMemo(
+    () =>
+      new THREE.CatmullRomCurve3(
+        ([[3.125, 1.236, -10.18], [3.15, 0.9, -10.0], [3.0, 0.03, -9.85], [0.2, 0.03, -9.85], [-0.9, 0.03, -9.85], [-1.2, 0.03, -9.9], [-2.6, 0.03, -10.6], [-2.8, 0.25, -11.0]] as V3[]).map((v) => new THREE.Vector3(...v)),
+      ),
+    [],
+  )
   return (
     <group>
-      {/* vetrate */}
-      <mesh position={[3, 1.6, -7.5]} rotation={[0, Math.PI / 2, 0]} material={m.glass} userData={{ seeThrough: true }}><planeGeometry args={[5, 3.2]} /></mesh>
-      <mesh position={[6.4, 1.6, -5]} material={m.glass} userData={{ seeThrough: true }}><planeGeometry args={[3.2, 3.2]} /></mesh>
-      <mesh position={[3.3, 1.6, -5]} material={m.glass} userData={{ seeThrough: true }}><planeGeometry args={[0.6, 3.2]} /></mesh>
-      {[3, 3.6, 4.8, 8].map((x) => <Box key={x} p={[x, 1.6, -5]} s={[0.06, 3.2, 0.06]} m={m.metal} />)}
-      {[-10, -7.5, -5].map((z) => <Box key={z} p={[3, 1.6, z]} s={[0.06, 3.2, 0.06]} m={m.metal} />)}
-      <Box p={[5.5, 3.2, -5]} s={[5, 0.08, 0.08]} m={m.metal} />
-      <Box p={[3, 3.2, -7.5]} s={[0.08, 0.08, 5]} m={m.metal} />
-      <Label lines={['SALA SERVER']} p={[6.4, 2.6, -4.97]} w={2.2} h={0.4} opts={{ w: 512, h: 96, color: '#E8DFC9', font: '600 72px Big Shoulders Display' }} />
-      {/* rack */}
-      {[4.0, 5.0].map((x, i) => (
-        <group key={x} position={[x, 0, -9.4]}>
-          {i === 0 ? (
-            <Hit id="rack">
+      {/* pavimento flottante a piastrelle da 60 cm */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[6.5, 0.006, -8]} material={tiles} receiveShadow><planeGeometry args={[15, 8]} /></mesh>
+      {RACK_XS.map((x, i) =>
+        [0, 1].map((row) => {
+          const z = row === 0 ? L.RACK_B.z : -6.4
+          if (row === 0 && i === RACK_B_INDEX)
+            return (
+              <group key={`${i}${row}`} position={[x, 0, z]}>
+                <Hit id="rack">
+                  <CustomModel name="rack" />
+                  <RackLeds plugged={plugged} sandbox={sandbox} />
+                  {!plugged && <mesh position={[-0.04, 1.0, 0.48]} rotation={[0.3, 0, 0.2]}><cylinderGeometry args={[0.009, 0.009, 0.55, 6]} /><meshStandardMaterial color="#3d7bd0" /></mesh>}
+                  <Label lines={['RACK B']} p={[0, 2.25, 0.41]} w={0.6} h={0.15} opts={{ w: 256, h: 64, color: '#E8DFC9', font: '600 44px Big Shoulders Display' }} />
+                </Hit>
+              </group>
+            )
+          return (
+            <group key={`${i}${row}`} position={[x, 0, z]} rotation={[0, row ? Math.PI : 0, 0]}>
               <CustomModel name="rack" />
-              <RackLeds plugged={plugged} sandbox={sandbox} />
-              {!plugged && <mesh position={[-0.04, 1.0, 0.48]} rotation={[0.3, 0, 0.2]}><cylinderGeometry args={[0.009, 0.009, 0.55, 6]} /><meshStandardMaterial color="#3d7bd0" /></mesh>}
-              <Label lines={['RACK B']} p={[0, 2.25, 0.41]} w={0.6} h={0.15} opts={{ w: 256, h: 64, color: '#E8DFC9', font: '600 44px Big Shoulders Display' }} />
-            </Hit>
-          ) : (
-            <Hit id="rack">
-              <CustomModel name="rack" />
-              <RackLeds plugged sandbox={false} />
-            </Hit>
-          )}
-        </group>
-      ))}
-      <Hit id="cabinet" position={[6.6, 0, -9.4]}>
+              <mesh position={[0, 1.22, 0.406]} material={ledMat}><planeGeometry args={[0.4, 1.45]} /></mesh>
+            </group>
+          )
+        }),
+      )}
+      <Label lines={['FILA A']} p={[4.05, 2.3, -6.0]} w={0.9} h={0.2} opts={{ w: 256, h: 64, color: '#E8DFC9', font: '600 44px Big Shoulders Display', align: 'center' }} />
+      {/* condizionatore di precisione sul muro est */}
+      <group position={[13.5, 0, -8]} rotation={[0, -Math.PI / 2, 0]}>
+        <Box p={[0, 1.05, 0]} s={[1.9, 2.1, 0.85]} m={crac} cast />
+        {[-0.5, 0, 0.5].map((x) => <Box key={x} p={[x, 1.55, 0.43]} s={[0.42, 0.8, 0.01]} m={m.metal} />)}
+        <mesh position={[0.6, 0.6, 0.431]}><planeGeometry args={[0.18, 0.1]} /><meshStandardMaterial color="#9fd0ff" emissive="#7fb0e6" emissiveIntensity={1.5} /></mesh>
+      </group>
+      {/* LOCALE TECNICO: l'armadio di SANDBOX-7 e vecchie cassettiere */}
+      <Hit id="cabinet" position={[L.CABINET.x, 0, L.CABINET.z]}>
         <CustomModel name="cabinet" deps={[open]} tweak={(o) => { if (o.name === 'Anta') o.rotation.y = open ? -1.6 : 0 }} />
         {open && <mesh position={[0, 0.735, 0.252]}><planeGeometry args={[0.2, 0.05]} /><meshStandardMaterial map={sbLabel} /></mesh>}
         <pointLight position={[0, 0.9, 0.5]} color="#E8823A" intensity={open ? 1 : 0} distance={1.8} />
       </Hit>
-      {/* il cavo grigio, più vecchio degli altri, dalla porta 7 del Rack B all'armadio di SANDBOX-7 */}
+      {[-7, -8].map((z) => <Model key={z} id="drawer_cabinet" position={[-4.65, 0, z]} rotation={[0, Math.PI / 2, 0]} />)}
+      {/* il cavo grigio, più vecchio degli altri: dalla porta 7 del Rack B, sotto il muro, fino all'armadio */}
       <mesh>
-        <tubeGeometry args={[new THREE.CatmullRomCurve3([new THREE.Vector3(4.125, 1.236, -8.98), new THREE.Vector3(4.2, 1.0, -8.85), new THREE.Vector3(4.5, 0.03, -8.75), new THREE.Vector3(5.6, 0.03, -8.8), new THREE.Vector3(6.1, 0.25, -9.1)]), 48, 0.008, 6, false]} />
+        <tubeGeometry args={[cable, 96, 0.008, 6, false]} />
         <meshStandardMaterial color="#9c9a8f" roughness={0.7} />
       </mesh>
       <ServerRoomLight broken={!plugged && step !== 'm0_coffee' && step !== 'm0_login' && step !== 'm0_password'} />
-      <mesh position={[5.5, 3.15, -7.5]} rotation={[Math.PI / 2, 0, 0]}><planeGeometry args={[3, 0.25]} /><meshStandardMaterial color="#a8c8ee" emissive="#a8c8ee" emissiveIntensity={2} /></mesh>
+      {[-10.6, -6.4].map((z) => (
+        <mesh key={z} position={[4.05, L.CEILING - 0.02, z + (z < -8 ? 1.0 : -1.0)]} rotation={[Math.PI / 2, 0, 0]}><planeGeometry args={[6.5, 0.2]} /><meshStandardMaterial color="#a8c8ee" emissive="#a8c8ee" emissiveIntensity={2} /></mesh>
+      ))}
     </group>
   )
 }
@@ -777,20 +762,28 @@ function ServerRoomLight({ broken }: { broken: boolean }) {
     if (!l) return
     if (broken) {
       l.color.set('#e0503a')
-      l.intensity = 1.6 + Math.sin(clock.elapsedTime * 3) * 0.9
+      l.intensity = 1.8 + Math.sin(clock.elapsedTime * 3) * 0.9
     } else {
       l.color.set('#7fb0e6')
-      l.intensity = 3.2
+      l.intensity = 3.4
     }
   })
-  return <pointLight ref={ref} position={[5.5, 2.9, -7.2]} distance={9} />
+  return <pointLight ref={ref} position={[5, 2.9, -8.5]} distance={12} />
 }
 
+// Serrande su tutte le finestre: scendono una dopo l'altra, dalla più vicina alla porta delle scale.
+const STAIRS = L.DOORS.find((d) => d.id === 'stairs')!.pos
+const SHUT_RANK: number[] = (() => {
+  const order = L.WINDOWS.map((w, i) => ({ i, d: Math.hypot(w.x - STAIRS[0], w.z - STAIRS[2]) })).sort((a, b) => a.d - b.d)
+  const r: number[] = []
+  order.forEach((o, k) => (r[o.i] = k))
+  return r
+})()
 function Shutters({ lockdown, level }: { lockdown: boolean; level: number }) {
   const telo = useRef<(THREE.Object3D | null)[]>([])
   const landed = useRef<boolean[]>([])
   const started = useRef<boolean[]>([])
-  const OPEN = 3.2 // di quanto il telo sale dentro il cassonetto (finestre da 3 m)
+  const OPEN = 3.2 // di quanto il telo sale dentro il cassonetto (unità del modello)
   useFrame(() => {
     const cin = useGame.getState().cinematic
     telo.current.forEach((r, i) => {
@@ -803,50 +796,57 @@ function Shutters({ lockdown, level }: { lockdown: boolean; level: number }) {
       if (!cin) {
         // la stanza "risponde" ai progressi: le serrande si sollevano man mano che riprendi il controllo
         const target = OPEN * (level >= 3 ? 0.6 : level >= 2 ? 0.3 : 0)
-        if (target > r.position.y + 0.02 && !started.current[10 + i]) {
-          started.current[10 + i] = true
-          sfx.rattle(i * 0.2, 1.4)
+        if (target > r.position.y + 0.02 && !started.current[20 + i]) {
+          started.current[20 + i] = true
+          if (SHUT_RANK[i] < 3) sfx.rattle(SHUT_RANK[i] * 0.2, 1.4)
         }
         r.position.y += (target - r.position.y) * 0.02
         return
       }
-      const t = (performance.now() - cin) / 1000 - (0.7 + i * 0.55)
+      const t = (performance.now() - cin) / 1000 - (0.7 + SHUT_RANK[i] * 0.45)
       if (t < 0) return
       if (!started.current[i]) {
         started.current[i] = true
-        sfx.rattle(0, 0.5)
+        if (SHUT_RANK[i] < 4) sfx.rattle(0, 0.5)
       }
       const y = Math.max(0, OPEN - 0.5 * 16 * t * t)
       r.position.y = y
       if (y <= 0 && !landed.current[i]) {
         landed.current[i] = true
-        sfx.slam()
-        fx.shake = 0.07
+        if (SHUT_RANK[i] < 4) sfx.slam()
+        fx.shake = Math.max(fx.shake, 0.07 / (1 + SHUT_RANK[i] * 0.4))
       }
     })
   })
   return (
     <>
-      {[-7.5, -4.5, -1.5, 1.5, 4.5].map((z, i) => (
-        <CustomModel
-          key={z}
-          name="shutter"
-          position={[-7.9, 0.8, z]}
-          rotation={[0, Math.PI / 2, 0]}
-          tweak={(o) => {
-            if (o.name === 'Telo') {
-              telo.current[i] = o
-              o.position.y = OPEN
-            }
-          }}
-        />
-      ))}
+      {L.WINDOWS.map((w, i) => {
+        const south = w.rotY === 0
+        return (
+          <CustomModel
+            key={i}
+            name="shutter"
+            position={south ? [w.x, L.WINDOW_SILL, w.z - 0.12] : [w.x + 0.12, L.WINDOW_SILL, w.z]}
+            rotation={[0, south ? Math.PI : Math.PI / 2, 0]}
+            scale={[1, 0.7, 1]}
+            tweak={(o) => {
+              if (o.name === 'Telo') {
+                telo.current[i] = o
+                o.position.y = OPEN
+              }
+            }}
+          />
+        )
+      })}
     </>
   )
 }
 
+const POTTED = ['potted_plant_02_pot', 'potted_plant_02_leaves', 'potted_plant_02_dirt']
+
 function Building({ mode }: { mode: WorldMode }) {
   const m = useMats()
+  const northWall = usePBR('precast_concrete_wall', 8.75, 1, { normalScale: new THREE.Vector2(0.45, 0.45) })
   const lockdown = useGame((s) => !!s.progress?.flags.lockdown) && mode !== 'title'
   const emerg = useRef<THREE.PointLight[]>([])
   useEffect(() => () => sfx.alarmOff(), [])
@@ -871,58 +871,64 @@ function Building({ mode }: { mode: WorldMode }) {
   const brokenTex = useMemo(() => textTexture(['GUASTA', 'usate quella del B1'], { w: 256, h: 104, bg: '#f2efe6', color: '#b4442e', font: '700 40px Caveat', align: 'center', pad: 8, lineHeight: 1.05 }), [])
   const boxTex = useMemo(() => textTexture(['A. FERRI', 'DA RITIRARE'], { w: 256, h: 104, bg: '#f2efe6', color: '#1a1b1d', font: '800 40px "Big Shoulders Display"', align: 'center', pad: 10, lineHeight: 1.0 }), [])
   const boardTex = useMemo(() => noticeBoardTexture(), [])
-  const exitTex = useMemo(() => textTexture(['USCITA  →'], { w: 512, h: 160, bg: '#1f8a4c', color: '#f2fff4', font: '800 100px "Big Shoulders Display"', align: 'center', pad: 24 }), [])
+  const exitTex = useMemo(() => textTexture(['USCITA'], { w: 512, h: 160, bg: '#1f8a4c', color: '#f2fff4', font: '800 100px "Big Shoulders Display"', align: 'center', pad: 24 }), [])
   const wb = useMemo(() => textTexture(['GIORNI SENZA INCIDENTI:  0', '', '[UFFICI]—sw—ROUTER—sw—[SERVER]', '', '"due quartieri, un ponte" — A.'], { w: 1024, h: 512, bg: '#eeeeea', color: '#1d3a63', font: '700 52px Caveat', pad: 36, lineHeight: 1.25 }), [])
+  const tvTex = useMemo(() => textTexture(['RIUNIONE DI LUNEDÌ', '', 'Sicurezza Q3: 0 incidenti!', '(speriamo)'], { w: 512, h: 288, bg: '#10233a', color: '#cfe0f0', font: '600 34px "Inter Tight"', pad: 30, lineHeight: 1.3 }), [])
+  const PD = L.PLAYER_DESK
 
   return (
     <group>
-      {/* PAVIMENTO: cemento lucidato nei passaggi, moquette a quadrotte nelle zone di lavoro */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -2]} material={m.floor} receiveShadow><planeGeometry args={[16, 16]} /></mesh>
-      <Carpet p={[-1.9, -0.65]} w={7.4} d={7.5} />
-      <Carpet p={[-6.6, -4.5]} w={2.0} d={3.4} />
-      {/* SOFFITTO a 4.2 m: controsoffitto a pannelli con luci di cortesia incassate */}
+      {/* PAVIMENTO: cemento lucidato; moquette negli uffici e nella zona di lavoro */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -0.5]} material={m.floor} receiveShadow><planeGeometry args={[28, 23]} /></mesh>
+      <Carpet p={[-1, 2.5]} w={7.6} d={7.4} />
+      <Carpet p={[-11, -1]} w={5.8} d={5.8} />
+      <Carpet p={[11, -1]} w={5.8} d={5.8} />
+      <Carpet p={[-9.5, -8]} w={8.8} d={7.8} />
       <Ceiling />
-      {/* MURI: cemento a vista solo sul fondo (muro di rappresentanza), il resto intonacato */}
-      <Wall p={[0, 2.1, -10]} w={16} h={4.2} />
-      <Plaster p={[0, 2.1, 6]} r={[0, Math.PI, 0]} w={16} h={4.2} />
-      <Plaster p={[8, 2.1, -4]} r={[0, -Math.PI / 2, 0]} w={12} h={4.2} />
-      <Plaster p={[8, 2.1, 5]} r={[0, -Math.PI / 2, 0]} w={2} h={4.2} />
-      <Plaster p={[8, 3.6, 3]} r={[0, -Math.PI / 2, 0]} w={2} h={1.2} />
-      {/* battiscopa */}
-      {([[0, -9.99, 16, 0], [0, 5.99, 16, 0], [7.99, -4, 12, 1], [7.99, 5, 2, 1]] as [number, number, number, number][]).map(([x, z, w, rot], i) => (
-        <Box key={i} p={[rot ? x : x, 0.05, rot ? z : z]} r={[0, rot ? Math.PI / 2 : 0, 0]} s={[w, 0.1, 0.015]} m={m.black} />
-      ))}
-      {/* parete delle finestre: pilastri, davanzali, architravi */}
-      {[-9.25, -6, -3, 0, 3, 5.6].map((z, i) => (
-        <Plaster key={i} p={[-8, 2.1, z]} r={[0, Math.PI / 2, 0]} w={i === 0 || i === 5 ? 1.5 : 0.7} h={4.2} />
-      ))}
-      {[-7.5, -4.5, -1.5, 1.5, 4.5].map((z) => (
-        <group key={z}>
-          <Plaster p={[-8, 0.4, z]} r={[0, Math.PI / 2, 0]} w={2.3} h={0.8} />
-          <Plaster p={[-8, 4.0, z]} r={[0, Math.PI / 2, 0]} w={2.3} h={0.4} />
-          <Box p={[-7.92, 0.8, z]} s={[0.18, 0.04, 2.34]} m={m.steel} />
+      <Walls concrete={northWall} glass={m.glass} metal={m.metal} />
+
+      {/* PORTE */}
+      {L.DOORS.map((d) =>
+        d.id === 'stairs' ? (
+          <Hit key={d.id} id="door"><Door id="stairs" glass={m.glass} metal={m.metal} ledOn={!lockdown} /></Hit>
+        ) : (
+          <Hit key={d.id} id={`door_${d.id}` as InteractId}><Door id={d.id} glass={m.glass} metal={m.metal} /></Hit>
+        ),
+      )}
+
+      {/* FINESTRE: vetro, montante, davanzale; fuori la città */}
+      {L.WINDOWS.map((w, i) => (
+        <group key={i} position={[w.x, 0, w.z]} rotation={[0, w.rotY === 0 ? 0 : Math.PI / 2, 0]}>
           <Hit id="window">
-            <mesh position={[-8.05, 2.3, z]} rotation={[0, Math.PI / 2, 0]}>
-              <planeGeometry args={[2.3, 3.0]} />
-              <meshStandardMaterial color="#9fb6cc" transparent opacity={0.07} roughness={0.05} depthWrite={false} />
+            <mesh position={[0, 1.85, 0]}>
+              <planeGeometry args={[2.3, 2.1]} />
+              <meshStandardMaterial color="#9fb6cc" transparent opacity={0.07} roughness={0.05} depthWrite={false} side={THREE.DoubleSide} />
             </mesh>
           </Hit>
-          <Box p={[-8, 2.3, z]} s={[0.08, 3.0, 0.05]} m={m.metal} />
-          <Box p={[-8, 2.3, z]} s={[0.08, 0.05, 2.3]} m={m.metal} />
-          <Blinds z={z} />
+          <Box p={[0, 1.85, 0]} s={[0.05, 2.1, 0.08]} m={m.metal} />
+          <Box p={[0, L.WINDOW_SILL, 0]} s={[2.34, 0.04, 0.32]} m={m.steel} />
         </group>
       ))}
-      {/* la città, fuori: ricorda che il mondo continua oltre le finestre */}
-      <mesh position={[-26, 6, -2]} rotation={[0, Math.PI / 2, 0]}>
-        <planeGeometry args={[80, 20]} />
-        <meshBasicMaterial map={city} fog={false} />
-      </mesh>
+      {L.WINDOWS.filter((w) => w.rotY !== 0 && w.z < 2).map((w) => <Blinds key={w.z} x={w.x} z={w.z} rotY={w.rotY} />)}
+      <mesh position={[-42, 6, -0.5]} rotation={[0, Math.PI / 2, 0]}><planeGeometry args={[90, 24]} /><meshBasicMaterial map={city} fog={false} /></mesh>
+      <mesh position={[0, 6, 38]} rotation={[0, Math.PI, 0]}><planeGeometry args={[90, 24]} /><meshBasicMaterial map={city} fog={false} /></mesh>
       <Shutters lockdown={lockdown} level={level} />
-      {/* MURO DI FONDO: archivi, lavagna davanti alle scrivanie, logo e slogan in alto */}
-      {[-6.2, -5.0, 0.8, 2.0].map((x) => <Model key={x} id="drawer_cabinet" position={[x, 0, -9.7]} />)}
-      <Label lines={['HALDEN NETCARE']} p={[-2, 3.42, -9.98]} w={6} h={0.78} opts={{ w: 1536, h: 200, color: '#d8d2c4', font: '900 170px Big Shoulders Display', align: 'center' }} />
-      <Label lines={['BETTER CONNECTIONS, A BRIGHTER TOMORROW.']} p={[-2, 2.86, -9.98]} w={6} h={0.3} opts={{ w: 2048, h: 100, color: '#E8823A', font: '700 80px Big Shoulders Display', align: 'center' }} />
-      <Hit id="whiteboard" position={[-2, 0.1, -9.95]}>
+
+      {/* OPEN SPACE: due banchi da sei postazioni, la tua in prima fila */}
+      <PlayerDesk m={m} lockdown={lockdown} mode={mode} />
+      {mode === 'title' && <TitleProps m={m} />}
+      <Desk p={[PD.x - 2, 0, PD.z]} persona="tidy" />
+      <Desk p={[PD.x - 4, 0, PD.z]} persona="messy" />
+      <Desk p={[PD.x, 0, PD.z - 1]} ry={Math.PI} partition={false} persona="tidy" />
+      <Desk p={[PD.x - 2, 0, PD.z - 1]} ry={Math.PI} partition={false} persona="plant" />
+      <Desk p={[PD.x - 4, 0, PD.z - 1]} ry={Math.PI} partition={false} persona="empty" />
+      <Desk p={[PD.x, 0, 1]} persona="boss" />
+      <Desk p={[PD.x - 2, 0, 1]} persona="tidy" saver />
+      <Desk p={[PD.x - 4, 0, 1]} persona="empty" />
+      <Desk p={[PD.x, 0, 0]} ry={Math.PI} partition={false} persona="messy" />
+      <Desk p={[PD.x - 2, 0, 0]} ry={Math.PI} partition={false} persona="empty" />
+      <Desk p={[PD.x - 4, 0, 0]} ry={Math.PI} partition={false} persona="plant" />
+      <Hit id="whiteboard" position={[L.WHITEBOARD.x, 0.1, 7.9]} rotation={[0, Math.PI, 0]}>
         <CustomModel
           name="whiteboard"
           tweak={(o) => {
@@ -935,74 +941,44 @@ function Building({ mode }: { mode: WorldMode }) {
           }}
         />
       </Hit>
-      <Label lines={['LEVEL', 'B2']} p={[6.1, 2.55, 5.97]} r={[0, Math.PI, 0]} w={1.9} h={1.9} opts={{ w: 512, h: 512, color: '#d8d2c4', font: '900 210px Big Shoulders Display', lineHeight: 0.92 }} />
-      {/* uscita di sicurezza: verde luminoso, come negli edifici veri */}
-      <group position={[7.95, 3.42, 3]} rotation={[0, -Math.PI / 2, 0]}>
-        <Box p={[0, 0, -0.02]} s={[0.62, 0.22, 0.04]} m={m.black} />
-        <mesh><planeGeometry args={[0.58, 0.18]} /><meshStandardMaterial map={exitTex} emissiveMap={exitTex} emissive="#ffffff" emissiveIntensity={1.4} /></mesh>
-      </group>
+      <Model id="potted_plant_02" pick={POTTED} position={[-7.4, 0, 7.4]} />
+      <Model id="potted_plant_02" pick={POTTED} position={[7.4, 0, -3.4]} />
+      <Model id="metal_trash_can" pick={['metal_trash_can', 'metal_trash_can_lid']} position={[-4.5, 0, 2.5]} scale={0.5} />
+      <Model id="metal_trash_can" pick={['metal_trash_can', 'metal_trash_can_lid']} position={[2.5, 0, 2.5]} scale={0.5} />
+      {/* l'occhio di Teo: telecamera nell'angolo */}
+      <Model id="security_camera_01" position={[7.7, 2.95, 7.7]} rotation={[0, Math.PI * 1.25, 0]} scale={1.3} />
 
-      {/* segnaletica di orientamento */}
-      <Label lines={['SALA SERVER →']} p={[2.65, 2.45, -9.98]} w={1.6} h={0.3} opts={{ w: 1024, h: 190, color: '#E8823A', font: '900 150px "Big Shoulders Display"', align: 'center' }} />
-      <Label lines={['ARCHIVIO']} p={[-5.6, 2.3, -9.98]} w={1.4} h={0.3} opts={{ w: 1024, h: 210, color: '#d8d2c4', font: '900 170px "Big Shoulders Display"', align: 'center' }} />
-      {/* INGRESSO: porta a vetri, lettore badge, display, attaccapanni, distributore */}
-      <Hit id="door" position={[7.97, 0, 3]}>
-        <CustomModel
-          name="door"
-          rotation={[0, -Math.PI / 2, 0]}
-          deps={[lockdown]}
-          tweak={(o) => {
-            const mm = o as THREE.Mesh
-            if (mm.isMesh && o.name.startsWith('ReaderLED')) {
-              const c = lockdown ? '#D9644A' : '#6FBF8E'
-              mm.material = new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 3 })
-            }
-          }}
-        />
-      </Hit>
-      <Hit id="display" position={[7.96, 2.1, 4.6]} rotation={[0, -Math.PI / 2, 0]}>
-        <Box p={[0, 0, -0.03]} s={[1.1, 0.46, 0.04]} m={m.black} />
-        <mesh><planeGeometry args={[1, 0.38]} /><meshStandardMaterial ref={disp} map={display} emissiveMap={display} emissive="#ffffff" /></mesh>
-      </Hit>
-      <CustomModel name="coatrack" position={[7.4, 0, 5.45]} rotation={[0, -2.2, 0]} />
-      <Hit id="cooler" position={[7.55, 0, 0.9]}>
-        <CustomModel name="cooler" rotation={[0, -Math.PI / 2, 0]} />
-      </Hit>
-      <Model id="metal_trash_can" pick={['metal_trash_can', 'metal_trash_can_lid', 'metal_trash_can_handle_left', 'metal_trash_can_handle_right']} position={[7.55, 0, 0.15]} scale={0.5} />
-      {/* corridoio oltre il vetro: la libertà, vicinissima */}
-      <group position={[13, 0, 3]}>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} material={m.yellowFloor}><planeGeometry args={[10, 2]} /></mesh>
-        <Wall p={[0, 1.6, -1]} w={10} h={3.2} />
-        <Wall p={[0, 1.6, 1]} r={[0, Math.PI, 0]} w={10} h={3.2} />
-        <Wall p={[0, 3.2, 0]} r={[Math.PI / 2, 0, 0]} w={10} h={2} />
-        <mesh position={[5, 1.6, 0]} rotation={[0, -Math.PI / 2, 0]}><planeGeometry args={[2, 3.2]} /><meshStandardMaterial color="#6b5a43" /></mesh>
-        <Box p={[1, 0.25, -0.75]} s={[1.4, 0.06, 0.4]} m={m.wood} />
-        <Plant p={[3.5, 0, -0.7]} s={0.6} m={m} />
-        <pointLight position={[0, 2.9, 0]} color="#ffd9a0" intensity={2.5} distance={8} />
-      </group>
-
-      {/* POSTAZIONI A BANCO: due file, scrivanie contrapposte; finestra a sinistra, lavagna davanti */}
-      <PlayerDesk m={m} lockdown={lockdown} mode={mode} />
-      {mode === 'title' && <TitleProps m={m} />}
-      <Desk p={[-2, 0, 2]} persona="messy" />
-      <Desk p={[-4, 0, 2]} persona="tidy" />
-      <Desk p={[0, 0, 1]} ry={Math.PI} partition={false} persona="tidy" />
-      <Desk p={[-2, 0, 1]} ry={Math.PI} partition={false} persona="plant" />
-      <Desk p={[-4, 0, 1]} ry={Math.PI} partition={false} persona="empty" />
-      <Desk p={[0, 0, -2.4]} persona="boss" />
-      <Desk p={[-2, 0, -2.4]} persona="tidy" saver />
-      <Desk p={[-4, 0, -2.4]} persona="empty" />
-      <Desk p={[0, 0, -3.4]} ry={Math.PI} partition={false} persona="messy" />
-      <Desk p={[-2, 0, -3.4]} ry={Math.PI} partition={false} persona="empty" />
-      <Desk p={[-4, 0, -3.4]} ry={Math.PI} partition={false} persona="plant" />
+      {/* UFFICIO DI ADA (cap. 1) */}
       <AdaDesk m={m} />
+      <Model id="drawer_cabinet" position={[-13, 0, -3.6]} />
+      <Plant p={[-8.7, 0, 1.4]} s={1.1} m={m} />
+      <pointLight position={[-11, 2.9, -1]} color="#ffe2b8" intensity={lockdown ? 0.3 : 0.7} distance={7} decay={1.6} />
 
+      {/* SALA RIUNIONI (cap. 4) */}
+      <CustomModel name="meetingtable" position={[-9.5, 0, -8]} />
+      {[-10.3, -9.5, -8.7].map((x) => <Chair key={`a${x}`} p={[x, 0, -8.75]} ry={0.05 * (x + 9.5)} />)}
+      {[-10.3, -9.5, -8.7].map((x) => <Chair key={`b${x}`} p={[x, 0, -7.25]} ry={Math.PI + 0.08 * (x + 9.5)} />)}
+      <CustomModel
+        name="tv"
+        position={[-9.5, 0, -11.92]}
+        tweak={(o) => {
+          const mm = o as THREE.Mesh
+          if (mm.isMesh && o.name === 'TvScreen') {
+            tvTex.flipY = false
+            mm.material = new THREE.MeshStandardMaterial({ map: tvTex, emissiveMap: tvTex, emissive: '#ffffff', emissiveIntensity: 0.35 })
+          }
+        }}
+      />
+
+      {/* SALA SERVER (cap. 2) e LOCALE TECNICO (cap. 3) */}
       <ServerRoom m={m} />
 
-      {/* SALA RIUNIONI a vetri, con fascia satinata ad altezza occhi */}
-      <MeetingRoom m={m} />
-      {/* ANGOLO CAFFÈ: la macchina è guasta (per questo, nel prologo, esci a cercarne un'altra) */}
-      <Hit id="coffee" position={[3.6, 0, 5.65]} rotation={[0, Math.PI, 0]}>
+      {/* UFFICIO DI TEO (cap. 5) */}
+      <Desk p={[11, 0, -1]} ry={Math.PI / 2} persona="boss" saver />
+      <Plant p={[13.4, 0, -3.4]} s={1.1} m={m} />
+
+      {/* CUCINETTA: la macchina del caffè è guasta (per questo, nel prologo, esci a cercarne un'altra) */}
+      <Hit id="coffee" position={[L.KITCHEN.x, 0, L.KITCHEN.z]} rotation={[0, -Math.PI / 2, 0]}>
         <CustomModel
           name="kitchen"
           tweak={(o) => {
@@ -1014,12 +990,16 @@ function Building({ mode }: { mode: WorldMode }) {
           }}
         />
       </Hit>
-      {/* luce sottopensile: la cucinetta resta accesa anche di notte */}
-      <Box p={[3.6, 1.95, 5.75]} s={[2.4, 0.05, 0.3]} m={m.metal} />
-      <mesh position={[3.6, 1.92, 5.75]} rotation={[Math.PI / 2, 0, 0]}><planeGeometry args={[2.2, 0.12]} /><meshStandardMaterial color="#fff1d6" emissive="#ffe2b0" emissiveIntensity={1.2} /></mesh>
-      <pointLight position={[3.4, 1.8, 5.4]} color="#ffd9a0" intensity={1.1} distance={4.5} decay={1.5} />
-      {/* BACHECA: avvisi veri (e indizi) */}
-      <Hit id="board" position={[0.6, 0, 5.97]} rotation={[0, Math.PI, 0]}>
+      <Box p={[13.75, 1.95, L.KITCHEN.z]} s={[0.3, 0.05, 2.4]} m={m.metal} />
+      <mesh position={[13.75, 1.92, L.KITCHEN.z]} rotation={[Math.PI / 2, 0, 0]}><planeGeometry args={[0.12, 2.2]} /><meshStandardMaterial color="#fff1d6" emissive="#ffe2b0" emissiveIntensity={1.2} /></mesh>
+      <pointLight position={[13.2, 1.8, L.KITCHEN.z]} color="#ffd9a0" intensity={1.1} distance={5} decay={1.5} />
+      <Hit id="cooler" position={[13.6, 0, 7.55]}>
+        <CustomModel name="cooler" rotation={[0, -Math.PI / 2, 0]} />
+      </Hit>
+      <Model id="metal_trash_can" pick={['metal_trash_can', 'metal_trash_can_lid', 'metal_trash_can_handle_left', 'metal_trash_can_handle_right']} position={[13.6, 0, 2.6]} scale={0.5} />
+
+      {/* ARCHIVIO: bacheca, cassettiere, stampante, lo scatolone di Ada mai ritirato */}
+      <Hit id="board" position={[L.BOARD.x, 0, L.BOARD.z]}>
         <CustomModel
           name="board"
           tweak={(o) => {
@@ -1031,10 +1011,9 @@ function Building({ mode }: { mode: WorldMode }) {
           }}
         />
       </Hit>
-      {/* STAMPANTE condivisa a fine fila */}
-      <CustomModel name="copier" position={[2.4, 0, 1.5]} rotation={[0, -Math.PI / 2, 0]} />
-      {/* LO SCATOLONE DI ADA, mai ritirato */}
-      <Hit id="adaBox" position={[-4.0, 0, -9.4]} rotation={[0, 0.25, 0]}>
+      {[-13.4, -12.6].map((x) => <Model key={x} id="drawer_cabinet" position={[x, 0, 2.4]} />)}
+      <CustomModel name="copier" position={[-9, 0, 7.5]} rotation={[0, Math.PI, 0]} />
+      <Hit id="adaBox" position={[L.ADA_BOX.x, 0, L.ADA_BOX.z]} rotation={[0, 0.25, 0]}>
         <CustomModel
           name="adabox"
           tweak={(o) => {
@@ -1046,23 +1025,38 @@ function Building({ mode }: { mode: WorldMode }) {
           }}
         />
       </Hit>
+      <Plant p={[-13.3, 0, 7.4]} s={1.2} m={m} />
 
-      {/* verde e servizi: piante agli angoli delle finestre e in testa alle file, cestini */}
-      <Plant p={[-7.3, 0, 5.3]} s={1.4} m={m} />
-      <Plant p={[-7.3, 0, -9.2]} s={1.3} m={m} />
-      <Plant p={[5.9, 0, 5.5]} s={1.1} m={m} />
-      <Model id="potted_plant_02" pick={['potted_plant_02_pot', 'potted_plant_02_leaves', 'potted_plant_02_dirt']} position={[1.55, 0, 1.5]} />
-      <Model id="potted_plant_02" pick={['potted_plant_02_pot', 'potted_plant_02_leaves', 'potted_plant_02_dirt']} position={[1.55, 0, -2.9]} />
-      <Model id="metal_trash_can" pick={['metal_trash_can', 'metal_trash_can_lid']} position={[-5.45, 0, 1.5]} scale={0.5} />
-      <Model id="metal_trash_can" pick={['metal_trash_can', 'metal_trash_can_lid']} position={[-5.45, 0, -2.9]} scale={0.5} />
+      {/* CORRIDOIO: ascensori spenti, scale a ovest, uscita a est */}
+      {[-1.2, 1.2].map((x) => (
+        <group key={x} position={[x, 0, 10.92]} rotation={[0, Math.PI, 0]}>
+          <Box p={[0, 1.15, 0]} s={[1.3, 2.3, 0.04]} m={m.metal} />
+          <Box p={[-0.27, 1.05, 0.025]} s={[0.52, 2.1, 0.02]} m={m.steel} />
+          <Box p={[0.27, 1.05, 0.025]} s={[0.52, 2.1, 0.02]} m={m.steel} />
+          <Box p={[0, 2.42, 0.025]} s={[0.4, 0.14, 0.02]} m={m.black} />
+        </group>
+      ))}
+      <Box p={[0, 1.2, 10.9]} s={[0.14, 0.26, 0.04]} m={m.steel} />
+      <Model id="wall_clock" position={[0, 2.75, 10.92]} rotation={[0, Math.PI, 0]} scale={1.2} />
+      <Label lines={['LEVEL', 'B2']} p={[3.1, 1.9, 10.92]} r={[0, Math.PI, 0]} w={1.0} h={1.0} opts={{ w: 512, h: 512, color: '#d8d2c4', font: '900 210px Big Shoulders Display', lineHeight: 0.92 }} />
+      <Label lines={['HALDEN NETCARE']} p={[-8, 2.55, 8.085]} w={4.2} h={0.55} opts={{ w: 1536, h: 200, color: '#d8d2c4', font: '900 170px Big Shoulders Display', align: 'center' }} />
+      <Label lines={['BETTER CONNECTIONS, A BRIGHTER TOMORROW.']} p={[-8, 2.15, 8.085]} w={4.2} h={0.2} opts={{ w: 2048, h: 100, color: '#E8823A', font: '700 80px Big Shoulders Display', align: 'center' }} />
+      <Hit id="display" position={[-12.4, 2.0, 10.92]} rotation={[0, Math.PI, 0]}>
+        <Box p={[0, 0, -0.03]} s={[1.1, 0.46, 0.04]} m={m.black} />
+        <mesh><planeGeometry args={[1, 0.38]} /><meshStandardMaterial ref={disp} map={display} emissiveMap={display} emissive="#ffffff" /></mesh>
+      </Hit>
+      <Model id="fire_alarm" position={[-13.92, 1.5, 7.7]} rotation={[0, Math.PI / 2, 0]} scale={1.5} />
+      <group position={[13.92, 2.75, 9.5]} rotation={[0, -Math.PI / 2, 0]}>
+        <Box p={[0, 0, -0.02]} s={[0.62, 0.22, 0.04]} m={m.black} />
+        <mesh><planeGeometry args={[0.58, 0.18]} /><meshStandardMaterial map={exitTex} emissiveMap={exitTex} emissive="#ffffff" emissiveIntensity={1.4} /></mesh>
+      </group>
+      <CustomModel name="coatrack" position={[12.9, 0, 10.4]} rotation={[0, -2.2, 0]} />
+      <pointLight position={[0, 2.9, 9.5]} color="#ffd9a0" intensity={lockdown ? 0.5 : 1.8} distance={14} decay={1.4} />
 
-      <Model id="wall_clock" position={[7.97, 3.82, 3]} rotation={[0, -Math.PI / 2, 0]} scale={1.2} />
-      <Model id="security_camera_01" position={[7.65, 3.95, 5.65]} rotation={[0, Math.PI * 1.25, 0]} scale={1.3} />
-      <Model id="fire_alarm" position={[7.97, 1.5, 1.7]} rotation={[0, -Math.PI / 2, 0]} scale={1.5} />
       {/* luci d'emergenza sui muri */}
-      {([[-7.9, 3.7, -6], [7.9, 3.7, -6], [7.9, 3.7, 5.5], [-7.9, 3.7, 5.5], [-2, 4.0, -9.9]] as V3[]).map((pp, i) => (
-        <group key={i} position={pp}>
-          <Box p={[0, 0, 0]} s={[0.35, 0.1, 0.14]} m={emergMat} />
+      {([[-7.92, 2.9, 3, 1], [7.92, 2.9, 3, 1], [0, 2.95, 8.08, 0], [-11, 2.95, -3.92, 0], [6.5, 2.95, -11.92, 0]] as [number, number, number, number][]).map(([x, y, z, side], i) => (
+        <group key={i} position={[x, y, z]}>
+          <Box p={[0, 0, 0]} s={side ? [0.14, 0.1, 0.35] : [0.35, 0.1, 0.14]} m={emergMat} />
           {i < 2 && <pointLight ref={(r) => r && (emerg.current[i] = r)} color="#E8823A" intensity={0} distance={16} />}
         </group>
       ))}
@@ -1118,13 +1112,7 @@ function Prewarm() {
 }
 
 // Indicatore dell'obiettivo: un rombo sull'oggetto da raggiungere, con la distanza.
-const TARGET_POINT: Record<string, V3> = {
-  computer: [0, 1.15, 1.85],
-  door: [7.9, 1.4, 4.25],
-  adaDesk: [-6.4, 1.1, -4.5],
-  rack: [4.0, 1.6, -9.0],
-  cabinet: [6.6, 1.2, -9.1],
-}
+const TARGET_POINT = L.TARGET_POINT
 function ObjectiveMarker({ mode }: { mode: WorldMode }) {
   const p = useGame((s) => s.progress)
   const show = useGame((s) => s.settings.markers !== false && !s.inspect && !s.cinematic && s.hovered === null)
@@ -1192,14 +1180,14 @@ function Scene({ mode }: { mode: WorldMode }) {
   return (
     <>
       <color attach="background" args={['#0a0e15']} />
-      <fog attach="fog" args={['#0a0e15', 9, 26]} />
+      <fog attach="fog" args={['#0a0e15', 12, 34]} />
       <ambientLight color="#3a4a66" intensity={lockdown ? 0.4 : 0.5} />
       <hemisphereLight args={['#6f7f99', '#2a241e', 0.5]} />
       {/* luci di cortesia notturne dal controsoffitto: sempre presenti, cambiano solo intensità */}
-      <pointLight position={[-2, 4.0, -0.6]} color="#ffe9c8" intensity={lockdown ? 0.15 : 0.9} distance={9} decay={1.6} />
-      <pointLight position={[4.5, 4.0, 1.8]} color="#ffe9c8" intensity={lockdown ? 0.1 : 0.6} distance={8} decay={1.6} />
+      <pointLight position={[-1, 3.0, 2.5]} color="#ffe9c8" intensity={lockdown ? 0.15 : 0.9} distance={9} decay={1.6} />
+      <pointLight position={[4.5, 3.0, 4.5]} color="#ffe9c8" intensity={lockdown ? 0.1 : 0.6} distance={8} decay={1.6} />
       {/* la luce resta sempre nella scena (aggiungere/togliere luci ricompila tutti i materiali = scatto) */}
-      <directionalLight position={[-16, 7, -1]} color="#a9bfe8" intensity={moon} castShadow shadow-mapSize={[1024, 1024]} shadow-bias={-0.0004} shadow-normalBias={0.03} shadow-camera-left={-10} shadow-camera-right={10} shadow-camera-top={10} shadow-camera-bottom={-10} />
+      <directionalLight position={[-24, 10, 8]} color="#a9bfe8" intensity={moon} castShadow shadow-mapSize={[1024, 1024]} shadow-bias={-0.0004} shadow-normalBias={0.03} shadow-camera-left={-17} shadow-camera-right={17} shadow-camera-top={17} shadow-camera-bottom={-17} />
       <Building mode={mode} />
       <Player mode={mode} />
       <ObjectiveMarker mode={mode} />
