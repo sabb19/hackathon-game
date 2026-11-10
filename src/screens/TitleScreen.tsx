@@ -22,7 +22,7 @@ export default function TitleScreen() {
   const archive = useGame((s) => s.archive)
   const [sub, setSub] = useState<Sub>(null)
   const [hover, setHover] = useState<TitleItem | null>(null)
-  const canContinue = !!progress && progress.step !== 'end'
+  const canContinue = !!progress && progress.step !== 'end' && progress.step !== 'm0_arrive' // solo una partita vera
 
   const pick = (id: TitleItem) => {
     if (id === 'monitor') {

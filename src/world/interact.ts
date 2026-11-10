@@ -2,6 +2,10 @@ import { useGame } from '../store/game'
 import { sfx } from '../audio'
 import { VIEWS } from './layout'
 import { doorOpen } from './Level'
+import { stepIndex } from '../content/steps'
+
+// prima del lockdown (arrivo, caffè, scale)
+const beforeLock = (step: Parameters<typeof stepIndex>[0]) => stepIndex(step) < stepIndex('m0_login')
 
 // Interazioni con l'ambiente: niente schede di testo.
 // La storia la raccontano gli oggetti: E avvicina la telecamera all'oggetto ("ispezione"),
@@ -38,9 +42,9 @@ export function promptFor(id: InteractId): string | null {
   const p = useGame.getState().progress
   if (!p) return null
   switch (id) {
-    case 'computer': return p.step === 'm0_coffee' ? 'Guarda lo schermo' : 'Siediti al computer'
+    case 'computer': return beforeLock(p.step) ? 'Guarda lo schermo' : 'Siediti al computer'
     case 'postit': return 'Guarda il post-it'
-    case 'door': return p.step === 'm0_coffee' ? 'Passa il badge' : 'Guarda il lettore badge'
+    case 'door': return p.step === 'm0_coffee' || p.step === 'm0_stairs' ? 'Passa il badge' : 'Guarda il lettore badge'
     case 'display': return 'Guarda il display'
     case 'adaDesk': return p.flags.notebook ? 'Guarda la scrivania' : 'Apri il cassetto'
     case 'adaPhoto': return 'Guarda la foto'
@@ -66,14 +70,14 @@ export function interact(id: InteractId) {
 
   switch (id) {
     case 'computer':
-      if (step === 'm0_coffee') return inspectAt('computer')
+      if (beforeLock(step)) return inspectAt('computer')
       g.setView('desktop')
       return
     case 'postit':
       g.setFlag('readPostit')
       return inspectAt('postit')
     case 'door':
-      if (step === 'm0_coffee') {
+      if (step === 'm0_coffee' || step === 'm0_stairs') {
         // la scena la raccontano luci, serrande e suoni (vedi World → Player)
         if (g.cinematic) return
         sfx.denied()
@@ -108,8 +112,11 @@ export function interact(id: InteractId) {
     case 'cooler':
       sfx.rattle(0, 0.6)
       return
-    case 'board':
     case 'coffee':
+      // il cartello GUASTA si legge da vicino: la macchinetta buona è al B1
+      if (step === 'm0_coffee') g.goto('m0_stairs')
+      return inspectAt('coffee')
+    case 'board':
     case 'adaBox':
       return inspectAt(id)
     default:

@@ -1,7 +1,9 @@
 import type { ChatMsg } from '../store/game'
 
 export type StepId =
+  | 'm0_arrive'
   | 'm0_coffee'
+  | 'm0_stairs'
   | 'm0_login'
   | 'm0_password'
   | 'm1_lab'
@@ -21,11 +23,23 @@ interface Step {
 }
 
 export const STEPS: Record<StepId, Step> = {
+  m0_arrive: {
+    chapter: 'Prologo — 20:41',
+    goal: 'Raggiungi la tua postazione',
+    objective: "Sei appena uscito/a dall'ascensore. La tua scrivania è nell'open space, in prima fila: quella con la lampada accesa.",
+    hints: ["Entra nell'open space dal varco davanti agli ascensori: la tua scrivania ha la lampada accesa."],
+  },
   m0_coffee: {
     chapter: 'Prologo — 23:44',
-    goal: 'Esci a prendere un caffè',
-    objective: 'La macchinetta del piano è guasta. Quella buona è al B1: esci dalla porta col badge.',
-    hints: ['La porta è sulla parete destra, sotto la luce verde USCITA. Passa il badge sul lettore.'],
+    goal: 'Prendi un caffè in cucinetta',
+    objective: "Tre ore di monitor tranquilli. Ti serve un caffè: la cucinetta è oltre il varco a est dell'open space.",
+    hints: ["La cucinetta è oltre il varco nella parete est dell'open space (a destra, guardando i monitor)."],
+  },
+  m0_stairs: {
+    chapter: 'Prologo — 23:46',
+    goal: 'Scendi al B1 dalle scale',
+    objective: 'La macchinetta è guasta. Quella buona è al B1: le scale sono in fondo al corridoio, a ovest.',
+    hints: ['Torna nel corridoio degli ascensori e vai fino in fondo a sinistra. Passa il badge sul lettore della porta SCALE.'],
   },
   m0_login: {
     chapter: 'Capitolo 1 — Chiuso dentro',
@@ -35,14 +49,8 @@ export const STEPS: Record<StepId, Step> = {
       { flag: 'notebook', label: 'Prendi il taccuino di Ada' },
       { flag: 'loggedIn', label: 'Accedi al tuo computer' },
     ],
-    onEnter: [
-      { from: 'teo', text: 'LOCKDOWN sul tuo piano?! Sei chiuso dentro?' },
-      { from: 'teo', text: 'Niente panico. Le porte le comanda un server, SECURITY-01. Capiamo cosa è successo e si sbloccano.' },
-      { from: 'teo', text: 'Prima: nel cassetto di Ada (la scrivania vicino alle finestre) c\'è il suo taccuino. Prendilo.' },
-      { from: 'teo', text: 'Poi entra nel PC. Le credenziali sono sul post-it. Lo so.' },
-    ],
     hints: [
-      'La scrivania di Ada è isolata vicino alle finestre, con la pianta secca. Apri il cassetto.',
+      "L'ufficio di Ada è quello a vetri sul lato ovest dell'open space. Il taccuino è nel cassetto della scrivania.",
       'Per il PC: guarda il post-it giallo sul monitor, poi siediti al computer.',
     ],
   },
@@ -77,7 +85,7 @@ export const STEPS: Record<StepId, Step> = {
     goal: 'Ricollega il cavo nel rack',
     objective: 'Il cavo verso la sala server è staccato. Vai al Rack B e ricollegalo.',
     onEnter: [{ from: 'teo', text: 'Il cavo è staccato, proprio fisicamente. Sala server, Rack B: quello che lampeggia rosso.' }],
-    hints: ['Esci dal PC, entra nella sala server e guarda il rack che lampeggia.'],
+    hints: ['La sala server è dietro la vetrata nord. Gira attorno alla prima fila di rack: il Rack B lampeggia rosso.'],
   },
   m1_verify: {
     chapter: 'Capitolo 2 — Il ponte mancante',
@@ -104,18 +112,20 @@ export const STEPS: Record<StepId, Step> = {
     goal: 'Trova SANDBOX-7 nella sala server',
     objective: 'SANDBOX-7 è collegato alla porta 7 del rack. Segui il cavo.',
     onEnter: [{ from: 'teo', text: 'SANDBOX-7?! Era dismesso. Era roba di Ada… Segui il cavo della porta 7.' }],
-    hints: ['Guarda il rack: il cavo grigio della porta 7 entra nell\'armadio beige accanto.', 'Apri l\'armadio.'],
+    hints: ['Guarda il Rack B: il cavo grigio della porta 7 scende a terra e passa sotto il muro, verso il locale tecnico.', "Il locale tecnico è accanto alla sala server. Apri l'armadio."],
   },
   end: { chapter: 'Fine della demo', goal: 'Fine della demo', objective: 'Fine della demo.', hints: [] },
 }
 
-export const STEP_ORDER: StepId[] = ['m0_coffee', 'm0_login', 'm0_password', 'm1_lab', 'm1_plug', 'm1_verify', 'm2_monitor', 'm2_locate', 'end']
+export const STEP_ORDER: StepId[] = ['m0_arrive', 'm0_coffee', 'm0_stairs', 'm0_login', 'm0_password', 'm1_lab', 'm1_plug', 'm1_verify', 'm2_monitor', 'm2_locate', 'end']
 export const stepIndex = (s: StepId) => STEP_ORDER.indexOf(s)
 
 // Dove deve andare il giocatore adesso (per l'indicatore nel mondo). null = al computer / nessun bersaglio.
 export function targetFor(step: StepId, flags: Record<string, boolean>): string | null {
   switch (step) {
-    case 'm0_coffee': return 'door'
+    case 'm0_arrive': return 'computer'
+    case 'm0_coffee': return 'coffee'
+    case 'm0_stairs': return 'door'
     case 'm0_login': return flags.notebook ? 'computer' : 'adaDesk'
     case 'm0_password':
     case 'm1_lab':

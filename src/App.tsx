@@ -12,6 +12,7 @@ import { useGlobalKeys } from './ui/useGlobalKeys'
 import Desktop from './os/Desktop'
 import Loading from './ui/Loading'
 import Notification from './ui/Notification'
+import VideoCall, { TimeSkip } from './ui/VideoCall'
 
 const World = lazy(() => import('./world/World'))
 
@@ -19,9 +20,10 @@ export default function App() {
   const screen = useGame((s) => s.screen)
   const view = useGame((s) => s.view)
   const paused = useGame((s) => s.paused)
-  const overlay = useGame((s) => s.phoneOpen || s.notebookOpen)
+  const overlay = useGame((s) => s.phoneOpen || s.notebookOpen || !!s.call || !!s.timeSkip)
   const bigText = useGame((s) => s.settings.bigText)
   const inGame = screen === 'game'
+  const callOrSkip = useGame((s) => !!s.call || !!s.timeSkip)
   useGlobalKeys()
 
   return (
@@ -34,9 +36,11 @@ export default function App() {
       {screen === 'intro' && <Intro />}
       {inGame && view === 'world' && <Hud />}
       {inGame && view === 'desktop' && <Desktop />}
-      {inGame && <Phone />}
+      {inGame && !callOrSkip && <Phone />}
       {inGame && <Notification />}
       {inGame && <GameNotebook />}
+      {inGame && <VideoCall />}
+      {inGame && <TimeSkip />}
       {inGame && paused && <PauseMenu />}
       {screen === 'demoEnd' && <DemoEnd />}
 

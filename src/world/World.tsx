@@ -19,6 +19,7 @@ type V3 = [number, number, number]
 // ---------- pianta: tutte le coordinate vengono da layout.ts ----------
 const BOUNDS = { minX: -13.7, maxX: 13.7, minZ: -11.7, maxZ: 10.7 }
 const START = new THREE.Vector3(...L.START)
+const ARRIVE = new THREE.Vector3(...L.ARRIVE)
 const TITLE_POS = new THREE.Vector3(...L.TITLE_POS)
 const TITLE_LOOK = new THREE.Vector3(...L.TITLE_LOOK)
 
@@ -209,7 +210,8 @@ function Player({ mode }: { mode: WorldMode }) {
 
   useEffect(() => {
     if (mode === 'play' && !placed.current) {
-      camera.position.copy(START)
+      // nuova partita: si parte dall'ascensore; partita salvata: dalla tua scrivania
+      camera.position.copy(useGame.getState().progress?.step === 'm0_arrive' ? ARRIVE : START)
       yaw.current = 0
       pitch.current = -0.12
       placed.current = true
@@ -268,7 +270,7 @@ function Player({ mode }: { mode: WorldMode }) {
     const up = (e: KeyboardEvent) => (keys.current[e.code] = false)
     const lockChange = () => {
       const g = useGame.getState()
-      if (!document.pointerLockElement && g.screen === 'game' && g.view === 'world' && !g.paused && !g.phoneOpen && !g.notebookOpen) {
+      if (!document.pointerLockElement && g.screen === 'game' && g.view === 'world' && !g.paused && !g.phoneOpen && !g.notebookOpen && !g.call && !g.timeSkip) {
         g.setInspect(null)
         g.setPaused(true)
       }
@@ -318,6 +320,8 @@ function Player({ mode }: { mode: WorldMode }) {
       if (t > 5.4) {
         g.setCinematic(null)
         g.goto('m0_login')
+        // Teo ha visto l'allarme: videochiamata
+        setTimeout(() => useGame.getState().setCall({ id: 'lockdown', ringing: true }), 900)
       }
       return
     }
@@ -746,7 +750,7 @@ function ServerRoom({ m }: { m: Mats }) {
         <tubeGeometry args={[cable, 96, 0.008, 6, false]} />
         <meshStandardMaterial color="#9c9a8f" roughness={0.7} />
       </mesh>
-      <ServerRoomLight broken={!plugged && step !== 'm0_coffee' && step !== 'm0_login' && step !== 'm0_password'} />
+      <ServerRoomLight broken={!plugged && si >= stepIndex('m1_lab')} />
       {[-10.6, -6.4].map((z) => (
         <mesh key={z} position={[4.05, L.CEILING - 0.02, z + (z < -8 ? 1.0 : -1.0)]} rotation={[Math.PI / 2, 0, 0]}><planeGeometry args={[6.5, 0.2]} /><meshStandardMaterial color="#a8c8ee" emissive="#a8c8ee" emissiveIntensity={2} /></mesh>
       ))}
@@ -843,6 +847,57 @@ function Shutters({ lockdown, level }: { lockdown: boolean; level: number }) {
 }
 
 const POTTED = ['potted_plant_02_pot', 'potted_plant_02_leaves', 'potted_plant_02_dirt']
+
+// Telecamera di sicurezza: ruota lentamente per seguirti, il LED rosso dice che Teo ti sta guardando.
+function TeoCam({ p }: { p: V3 }) {
+  const ref = useRef<THREE.Group>(null)
+  const led = useRef<THREE.MeshStandardMaterial>(null)
+  const { camera } = useThree()
+  useEffect(() => {
+    if (ref.current) ref.current.rotation.order = 'YXZ'
+  }, [])
+  useFrame(({ clock }, dt) => {
+    const g = ref.current
+    if (!g) return
+    const dx = camera.position.x - p[0]
+    const dz = camera.position.z - p[2]
+    const dy = camera.position.y - p[1]
+    const near = Math.hypot(dx, dz) < 14
+    if (near) {
+      const yaw = Math.atan2(dx, dz)
+      let d = yaw - g.rotation.y
+      d = Math.atan2(Math.sin(d), Math.cos(d))
+      const k = Math.min(1, dt * 1.5)
+      g.rotation.y += d * k
+      g.rotation.x += (Math.atan2(-dy, Math.hypot(dx, dz)) - g.rotation.x) * k
+    }
+    if (led.current) led.current.emissiveIntensity = near && Math.sin(clock.elapsedTime * 2.5) > -0.2 ? 3 : 0.3
+  })
+  return (
+    <group position={p} scale={1.5}>
+      <mesh position={[0, 0.06, 0]}><cylinderGeometry args={[0.03, 0.03, 0.12, 8]} /><meshStandardMaterial color="#d9d6cf" roughness={0.5} /></mesh>
+      <group ref={ref}>
+        <mesh position={[0, -0.02, 0.06]}><boxGeometry args={[0.11, 0.1, 0.24]} /><meshStandardMaterial color="#e6e3dc" roughness={0.45} /></mesh>
+        <mesh position={[0, -0.02, 0.185]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.035, 0.035, 0.02, 16]} /><meshStandardMaterial color="#111316" roughness={0.2} metalness={0.4} /></mesh>
+        <mesh position={[0.038, 0.02, 0.183]}><sphereGeometry args={[0.008, 8, 8]} /><meshStandardMaterial ref={led} color="#ff3b2f" emissive="#ff3b2f" emissiveIntensity={3} /></mesh>
+      </group>
+    </group>
+  )
+}
+
+// Regia del prologo: arrivato alla scrivania, squilla la videochiamata di Teo.
+function PrologueDirector({ mode }: { mode: WorldMode }) {
+  const { camera } = useThree()
+  useFrame(() => {
+    if (mode !== 'play') return
+    const g = useGame.getState()
+    if (g.progress?.step !== 'm0_arrive' || g.call || g.timeSkip) return
+    if (Math.hypot(camera.position.x - L.PLAYER_DESK.x, camera.position.z - L.PLAYER_DESK.z - 0.6) < 1.6) {
+      g.setCall({ id: 'handover', ringing: true })
+    }
+  })
+  return null
+}
 
 function Building({ mode }: { mode: WorldMode }) {
   const m = useMats()
@@ -945,8 +1000,14 @@ function Building({ mode }: { mode: WorldMode }) {
       <Model id="potted_plant_02" pick={POTTED} position={[7.4, 0, -3.4]} />
       <Model id="metal_trash_can" pick={['metal_trash_can', 'metal_trash_can_lid']} position={[-4.5, 0, 2.5]} scale={0.5} />
       <Model id="metal_trash_can" pick={['metal_trash_can', 'metal_trash_can_lid']} position={[2.5, 0, 2.5]} scale={0.5} />
-      {/* l'occhio di Teo: telecamera nell'angolo */}
-      <Model id="security_camera_01" position={[7.7, 2.95, 7.7]} rotation={[0, Math.PI * 1.25, 0]} scale={1.3} />
+      {/* l'occhio di Teo: telecamere che ti seguono */}
+      {mode !== 'title' && (
+        <>
+          <TeoCam p={[7.7, 2.95, 7.7]} />
+          <TeoCam p={[-13.6, 2.95, 10.6]} />
+          <TeoCam p={[-0.8, 2.95, -3.75]} />
+        </>
+      )}
 
       {/* UFFICIO DI ADA (cap. 1) */}
       <AdaDesk m={m} />
@@ -1190,6 +1251,7 @@ function Scene({ mode }: { mode: WorldMode }) {
       <directionalLight position={[-24, 10, 8]} color="#a9bfe8" intensity={moon} castShadow shadow-mapSize={[1024, 1024]} shadow-bias={-0.0004} shadow-normalBias={0.03} shadow-camera-left={-17} shadow-camera-right={17} shadow-camera-top={17} shadow-camera-bottom={-17} />
       <Building mode={mode} />
       <Player mode={mode} />
+      <PrologueDirector mode={mode} />
       <ObjectiveMarker mode={mode} />
       <GuideLight mode={mode} />
       <ShadowControl />

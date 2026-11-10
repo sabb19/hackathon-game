@@ -4,6 +4,7 @@ import { useGame } from './store/game'
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
 let alarmTimer: ReturnType<typeof setInterval> | null = null
+let ringTimer: ReturnType<typeof setInterval> | null = null
 
 function ac() {
   if (!ctx) {
@@ -91,6 +92,25 @@ export const sfx = {
     n.start(t)
   },
   // allarme dell'edificio: due toni, lontano (filtrato) e intermittente — non un ronzio continuo
+  // squillo del telefono: trillo morbido, due volte ogni 3 secondi
+  ringStart() {
+    if (ringTimer) return
+    const ring = () => {
+      for (let k = 0; k < 8; k++) tone(k % 2 ? 1180 : 1320, k * 0.06, 0.07, 'sine', 0.03, 2400)
+      for (let k = 0; k < 8; k++) tone(k % 2 ? 1180 : 1320, 0.7 + k * 0.06, 0.07, 'sine', 0.03, 2400)
+    }
+    ring()
+    ringTimer = setInterval(ring, 3000)
+  },
+  ringStop() {
+    if (ringTimer) clearInterval(ringTimer)
+    ringTimer = null
+  },
+  // ascensore arrivato al piano
+  ding() {
+    tone(1046, 0, 1.2, 'sine', 0.05)
+    tone(784, 0.35, 1.4, 'sine', 0.05)
+  },
   alarmOn() {
     if (alarmTimer) return
     const chime = () => {

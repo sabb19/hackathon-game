@@ -74,6 +74,7 @@ export const DOORS: DoorDef[] = [
 
 // ---- posizioni chiave ----
 export const PLAYER_DESK = { x: 1, z: 5 } // la tua postazione (prima fila, rivolta a nord)
+export const ARRIVE: V3 = [1.2, 1.6, 10.0] // appena uscito/a dall'ascensore
 export const START: V3 = [PLAYER_DESK.x, 1.6, PLAYER_DESK.z + 1.6]
 export const TITLE_POS: V3 = [PLAYER_DESK.x + 0.55, 1.5, PLAYER_DESK.z + 1.0]
 export const TITLE_LOOK: V3 = [PLAYER_DESK.x, 0.8, PLAYER_DESK.z + 0.1]
@@ -112,6 +113,7 @@ export const TARGET_POINT: Record<string, V3> = {
   adaDesk: [ADA_DESK.x, 1.1, ADA_DESK.z],
   rack: [RACK_B.x, 1.6, -10.2],
   cabinet: [CABINET.x, 1.2, -11.1],
+  coffee: [13.6, 1.3, 4.55],
 }
 
 // Finestre (per serrande, veneziane, vetri): centro e orientamento

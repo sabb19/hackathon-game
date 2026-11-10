@@ -158,6 +158,7 @@ export function Walls({ concrete, glass, metal }: { concrete: THREE.Material; gl
 // ---------- porte ----------
 // Il battente scorre dentro il muro quando la porta si apre. Il lettore badge: rosso chiusa, verde aperta.
 // Da che lato del muro sta la parte pubblica (dove mettere la targa), nel sistema locale della porta.
+const OPEN_NAME: Partial<Record<DoorId, string>> = { ada: "l'ufficio di Ada", server: 'la sala server', tech: 'il locale tecnico', meeting: 'la sala riunioni', teo: 'il suo ufficio', stairs: 'le scale', exit: "l'uscita" }
 const PUBLIC_SIDE: Record<DoorId, 1 | -1> = { stairs: -1, exit: 1, ada: -1, teo: 1, server: 1, tech: 1, meeting: 1 }
 
 export function Door({ id, glass, metal, ledOn }: { id: DoorId; glass: THREE.Material; metal: THREE.Material; ledOn?: boolean }) {
@@ -169,10 +170,10 @@ export function Door({ id, glass, metal, ledOn }: { id: DoorId; glass: THREE.Mat
     // Teo apre da remoto: clic della serratura e un avviso
     if (open && !was.current) {
       sfx.click()
-      useGame.getState().showToast(`Teo ha sbloccato: ${d.label.toLowerCase()}`)
+      useGame.getState().showToast(`Teo ha aperto ${OPEN_NAME[id] ?? 'una porta'}`)
     }
     was.current = open
-  }, [open, d.label])
+  }, [open, id])
   useFrame((_, dt) => {
     if (!leaf.current) return
     const target = open ? d.width * 0.95 : 0

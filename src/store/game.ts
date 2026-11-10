@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import { sfx } from '../audio'
 import { STEPS, type StepId } from '../content/steps'
 import type { ConceptId } from '../content/concepts'
+import type { CallId } from '../content/calls'
 
 export type Screen = 'title' | 'intro' | 'game' | 'demoEnd'
 export type View = 'world' | 'desktop'
@@ -49,6 +50,8 @@ interface State {
   inspect: { id: string; pos: [number, number, number]; look: [number, number, number]; action?: string } | null
   notif: { id: number; text: string } | null
   cinematic: number | null // inizio della scena del lockdown (performance.now)
+  call: { id: CallId; ringing: boolean } | null // videochiamata di Teo
+  timeSkip: number | null // inizio del salto di tempo (performance.now)
   notebookOpen: boolean
   toast: string | null
   hovered: string | null
@@ -59,6 +62,9 @@ interface State {
   setPaused: (p: boolean) => void
   setPhone: (o: boolean) => void
   setCinematic: (t: number | null) => void
+  setCall: (c: State['call']) => void
+  setTimeSkip: (t: number | null) => void
+  log: (from: ChatMsg['from'], text: string) => void
   setInspect: (i: State['inspect']) => void
   setNotebook: (o: boolean) => void
   setHovered: (h: string | null) => void
@@ -104,15 +110,26 @@ export const useGame = create<State>()(
       inspect: null,
       notif: null,
       cinematic: null,
+      call: null,
+      timeSkip: null,
       notebookOpen: false,
       toast: null,
       hovered: null,
       note: null,
 
-      setScreen: (screen) => set({ screen, paused: false, phoneOpen: false, notebookOpen: false, inspect: null }),
+      setScreen: (screen) => set({ screen, paused: false, phoneOpen: false, notebookOpen: false, inspect: null, call: null, timeSkip: null, cinematic: null }),
       setView: (view) => set({ view }),
       setPaused: (paused) => set({ paused }),
       setCinematic: (cinematic) => set({ cinematic }),
+      setCall: (call) => set({ call, phoneOpen: false, notebookOpen: false, inspect: null }),
+      setTimeSkip: (timeSkip) => set({ timeSkip }),
+      // registra nel telefono senza notifica (es. la trascrizione di una videochiamata)
+      log: (from, text) => {
+        const p = get().progress
+        if (!p) return
+        set({ progress: { ...p, messages: [...p.messages, { id: msgId++, from, text }] } })
+        get().markSeen('phone')
+      },
       setInspect: (inspect) => set({ inspect }),
       setPhone: (phoneOpen) => {
         set({ phoneOpen, notebookOpen: false })
@@ -135,7 +152,7 @@ export const useGame = create<State>()(
           progress: {
             name: name.trim() || 'Tecnico',
             username: makeUsername(name),
-            step: 'm0_coffee',
+            step: 'm0_arrive',
             flags: {},
             concepts: [],
             messages: [],
@@ -149,7 +166,7 @@ export const useGame = create<State>()(
           paused: false,
           note: null,
         })
-        get().goto('m0_coffee')
+        get().goto('m0_arrive')
       },
       resetAll: () => set({ progress: null, archive: [] }),
 
@@ -222,7 +239,7 @@ export const useGame = create<State>()(
     }),
     {
       name: 'the-last-session',
-      version: 3,
+      version: 4,
       migrate: (old) => ({ ...(old as object), progress: null }) as never,
       partialize: (s) => ({ settings: s.settings, progress: s.progress, archive: s.archive }),
     },
