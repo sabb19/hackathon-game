@@ -53,7 +53,7 @@ interface State {
   cinematic: number | null // inizio della scena del lockdown (performance.now)
   call: { id: CallId; ringing: boolean } | null // videochiamata di Teo
   timeSkip: number | null // inizio del salto di tempo (performance.now)
-  minigame: 'rackCable' | 'keypad' | null // minigioco fisico aperto
+  minigame: 'rackCable' | 'keypad' | 'labelCopier' | 'labelSandbox' | null // minigioco fisico aperto
   notebookOpen: boolean
   toast: string | null
   hovered: string | null

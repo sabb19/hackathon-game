@@ -3,6 +3,7 @@ import { sfx } from '../audio'
 import { VIEWS } from './layout'
 import { doorOpen } from './Level'
 import { stepIndex } from '../content/steps'
+import { lockPointer } from './pointer'
 
 // prima del lockdown (arrivo, caffè, scale)
 const beforeLock = (step: Parameters<typeof stepIndex>[0]) => stepIndex(step) < stepIndex('m0_login')
@@ -13,7 +14,7 @@ const beforeLock = (step: Parameters<typeof stepIndex>[0]) => stepIndex(step) < 
 export type InteractId =
   | 'computer' | 'postit' | 'door' | 'display' | 'adaDesk' | 'adaPhoto' | 'whiteboard' | 'rack' | 'cabinet' | 'window' | 'cooler'
   | 'board' | 'coffee' | 'adaBox'
-  | 'lightSwitch' | 'adaCalendar'
+  | 'lightSwitch' | 'adaCalendar' | 'copier'
   | 'door_ada' | 'door_server' | 'door_tech' | 'door_meeting' | 'door_teo' | 'door_exit'
 
 const DOOR_IDS = ['door_ada', 'door_server', 'door_tech', 'door_meeting', 'door_teo', 'door_exit'] as const
@@ -49,6 +50,7 @@ export function promptFor(id: InteractId): string | null {
     case 'display': return 'Guarda il display'
     case 'adaDesk': return p.flags.notebook ? 'Guarda la scrivania' : p.flags.adaDrawerOpen ? 'Prendi il taccuino' : 'Cassetto chiuso a codice'
     case 'adaCalendar': return 'Guarda il calendario'
+    case 'copier': return p.step === 'm2_locate' && !p.flags.checkedCopier ? "Controlla l'etichetta" : null
     case 'adaPhoto': return 'Guarda la foto'
     case 'whiteboard': return 'Guarda la lavagna'
     case 'rack': return 'Guarda il rack'
@@ -110,7 +112,11 @@ export function interact(id: InteractId) {
       return inspectAt('whiteboard')
     case 'rack':
       if (step === 'm1_plug') return inspectAt('rack', 'Ricollega il cavo')
-      if (step === 'm2_locate') g.setFlag('followedCable') // il cavo grigio della porta 7 entra nell'armadio
+      if (step === 'm2_locate' && p.flags.checkedCopier && !p.flags.followedCable) {
+        // il cavo grigio della porta 7 scende a terra e passa sotto il muro
+        g.setFlag('followedCable')
+        g.say('teo', "Il cavo grigio della porta 7 scende a terra e passa sotto il muro: finisce nel locale tecnico. Nell'armadio di Ada.")
+      }
       return inspectAt('rack')
     case 'cabinet':
       if (step === 'm2_locate' && p.flags.followedCable) return inspectAt('cabinet', "Apri l'armadio")
@@ -121,6 +127,11 @@ export function interact(id: InteractId) {
       return
     case 'cooler':
       sfx.rattle(0, 0.6)
+      return
+    case 'copier':
+      if (step !== 'm2_locate' || p.flags.checkedCopier) return
+      sfx.click()
+      g.setMinigame('labelCopier')
       return
     case 'lightSwitch':
       if (step !== 'm0_ada' || p.flags.archiveDark) return
@@ -171,9 +182,28 @@ export function inspectAction() {
       g.setMinigame('rackCable')
       return
     case 'cabinet':
-      g.setFlag('foundSandbox')
+      // l'armadio si apre: dentro un mini PC con l'etichetta da confrontare
+      g.setFlag('cabinetOpen')
       sfx.rattle(0, 0.4)
       g.setInspect({ ...ins, action: undefined })
+      setTimeout(() => useGame.getState().setMinigame('labelSandbox'), 1200)
+      return
+  }
+}
+
+// Capitolo 3: la stampante dell'archivio non è PRINTER-2
+export function copierChecked() {
+  const g = useGame.getState()
+  g.setFlag('checkedCopier')
+  g.say('teo', "Quindi PRINTER-2 non è una stampante vera: è un travestimento. Vai in sala server e guarda la porta 7 del Rack B: dove va quel cavo?")
+  lockPointer()
+}
+
+// Capitolo 3: il MAC conferma che il mini PC nell'armadio è PRINTER-2 travestito, cioè SANDBOX-7
+export function sandboxFound() {
+  const g = useGame.getState()
+  g.setFlag('foundSandbox')
+  {
       g.say('ada', 'Se state leggendo questo, la trappola ha funzionato. Non spegnetemi ancora: prima capite chi è entrato. — A.F.', 'Se state leggendo questo…')
       g.say('teo', '…A.F. È Ada. Ada Ferri. Ma è in pensione da sei mesi. Che cosa hai trovato là dentro?')
       g.goto('end')

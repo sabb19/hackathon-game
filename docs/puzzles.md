@@ -26,7 +26,7 @@
 | Prologo | — | Console di sorveglianza: ping, riavvio, ping | ✔ |
 | 1 | Tastierino del cassetto (foto del gatto, calendario) | La macchina che indovina le password | ✔ |
 | 2 | Cavo nel Rack B (etichette, LED) | Laboratorio di rete in 3 tappe | ✔ |
-| 3 | **Etichette dei dispositivi**: la stampante dell'archivio, poi il dispositivo nell'armadio, confrontati con il MAC visto al monitor | Monitor di rete (carte d'identità) | in corso |
+| 3 | **Etichette dei dispositivi**: la stampante dell'archivio, poi il dispositivo nell'armadio, confrontati con il MAC visto al monitor | Monitor di rete (carte d'identità) | ✔ |
 | 4 | Email stampata sulla scrivania di Bruno: cerchia gli indizi (mittente, link, urgenza) | Posta di Bruno: segnala, blocca, isola | da fare |
 | 5 | Monitor delle telecamere: ordina i fotogrammi | Linea del tempo dei log | da fare |
 | 6 | Lettore badge delle scale: lista di chi passa (regole) | Il buttafuori (firewall) | da fare |

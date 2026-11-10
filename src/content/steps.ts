@@ -124,10 +124,19 @@ export const STEPS: Record<StepId, Step> = {
   },
   m2_locate: {
     chapter: 'Capitolo 3 — Chi c\'è?',
-    goal: 'Trova SANDBOX-7 nella sala server',
-    objective: 'SANDBOX-7 è collegato alla porta 7 del rack. Segui il cavo.',
-    onEnter: [{ from: 'teo', text: 'SANDBOX-7?! Era dismesso. Era roba di Ada… Segui il cavo della porta 7.' }],
-    hints: ['Guarda il Rack B: il cavo grigio della porta 7 scende a terra e passa sotto il muro, verso il locale tecnico.', "Il locale tecnico è accanto alla sala server. Apri l'armadio."],
+    goal: 'Trova PRINTER-2 sul piano',
+    objective: "Il monitor dice: PRINTER-2, porta 7, MAC 00:0A:F7:5E:11:07. Controlla l'etichetta dell'unica stampante del piano (archivio), poi segui il cavo della porta 7.",
+    checklist: [
+      { flag: 'checkedCopier', label: "Controlla l'etichetta della stampante dell'archivio" },
+      { flag: 'followedCable', label: 'Segui il cavo della porta 7 del Rack B' },
+      { flag: 'foundSandbox', label: "Confronta l'etichetta del dispositivo nascosto" },
+    ],
+    onEnter: [{ from: 'teo', text: "Un dispositivo che si fa chiamare PRINTER-2… ma l'unica stampante del piano è quella dell'archivio. Vai a guardare l'etichetta sotto: il MAC è stampato lì." }],
+    hints: [
+      "La stampante è nell'archivio, oltre il varco a ovest dell'open space. Clicca per leggere l'etichetta e confronta nome e MAC.",
+      'Il nome si cambia in un minuto, il MAC no: decide il MAC. Poi, in sala server, guarda la porta 7 del Rack B.',
+      "Il cavo della porta 7 finisce nel locale tecnico: apri l'armadio e confronta l'etichetta del mini PC.",
+    ],
   },
   end: { chapter: 'Fine della demo', goal: 'Fine della demo', objective: 'Fine della demo.', hints: [] },
 }
@@ -149,7 +158,7 @@ export function targetFor(step: StepId, flags: Record<string, boolean>): string 
     case 'm1_verify':
     case 'm2_monitor': return 'computer'
     case 'm1_plug': return 'rack'
-    case 'm2_locate': return flags.followedCable ? 'cabinet' : 'rack'
+    case 'm2_locate': return !flags.checkedCopier ? 'copier' : flags.followedCable ? 'cabinet' : 'rack'
     default: return null
   }
 }

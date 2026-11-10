@@ -117,6 +117,7 @@ export const TARGET_POINT: Record<string, V3> = {
   rack: [RACK_B.x, 1.6, -10.2],
   cabinet: [CABINET.x, 1.2, -11.1],
   coffee: [13.6, 1.3, 4.55],
+  copier: [-9, 1.25, 7.3],
   lightSwitch: [-8.15, 1.25, 3.5],
 }
 

@@ -726,7 +726,7 @@ function ServerRoom({ m }: { m: Mats }) {
   const si = stepIndex(step)
   const plugged = si >= stepIndex('m1_verify')
   const sandbox = si >= stepIndex('m2_monitor')
-  const open = !!flags.foundSandbox
+  const open = !!flags.cabinetOpen || !!flags.foundSandbox
   const sbLabel = useMemo(() => textTexture(['SANDBOX-7', 'ESERCITAZIONE', '— A.F.'], { w: 256, h: 128, bg: '#efe6c8', color: '#222', font: '500 26px "JetBrains Mono"', pad: 10 }), [])
   const ledMat = useMemo(() => {
     const t = rackLedTexture()
@@ -1327,7 +1327,9 @@ function Building({ mode }: { mode: WorldMode }) {
       {[-13.45, -12.95, -12.45, -11.95].map((x, i) => <FilingCabinet key={x} p={[x, 0, 2.36]} open={i === 2} />)}
       {/* scaffale di faldoni sotto la finestra ovest dell'archivio */}
       <Shelf p={[-13.72, 0, 7.05]} ry={Math.PI / 2} />
-      <CustomModel name="copier" position={[-9, 0, 7.5]} rotation={[0, Math.PI, 0]} />
+      <Hit id="copier" position={[-9, 0, 7.5]} rotation={[0, Math.PI, 0]}>
+        <CustomModel name="copier" />
+      </Hit>
       <Hit id="adaBox" position={[L.ADA_BOX.x, 0, L.ADA_BOX.z]} rotation={[0, 0.25, 0]}>
         <CustomModel
           name="adabox"
