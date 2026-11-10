@@ -12,6 +12,7 @@ import { useGlobalKeys } from './ui/useGlobalKeys'
 import Desktop from './os/Desktop'
 import Watch from './os/Watch'
 import ChapterCard from './ui/ChapterCard'
+import RackCable from './ui/RackCable'
 import { stepIndex } from './content/steps'
 import Loading from './ui/Loading'
 import Notification from './ui/Notification'
@@ -23,12 +24,13 @@ export default function App() {
   const screen = useGame((s) => s.screen)
   const view = useGame((s) => s.view)
   const paused = useGame((s) => s.paused)
-  const overlay = useGame((s) => s.phoneOpen || s.notebookOpen || !!s.call || !!s.timeSkip)
+  const overlay = useGame((s) => s.phoneOpen || s.notebookOpen || !!s.call || !!s.timeSkip || !!s.minigame)
   const bigText = useGame((s) => s.settings.bigText)
   const inGame = screen === 'game'
   // prima del lockdown il PC mostra solo la console di sorveglianza
   const prologue = useGame((s) => !!s.progress && stepIndex(s.progress.step) < stepIndex('m0_login'))
-  const callOrSkip = useGame((s) => !!s.call || !!s.timeSkip)
+  const callOrSkip = useGame((s) => !!s.call || !!s.timeSkip || !!s.minigame)
+  const minigame = useGame((s) => s.minigame)
   useGlobalKeys()
 
   return (
@@ -42,6 +44,7 @@ export default function App() {
       {inGame && view === 'world' && <Hud />}
       {inGame && view === 'desktop' && (prologue ? <Watch /> : <Desktop />)}
       {inGame && <ChapterCard />}
+      {inGame && minigame === 'rackCable' && <RackCable />}
       {inGame && !callOrSkip && !(prologue && view === 'desktop') && <Phone />}
       {inGame && <Notification />}
       {inGame && <GameNotebook />}

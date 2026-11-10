@@ -270,7 +270,7 @@ function Player({ mode }: { mode: WorldMode }) {
     const up = (e: KeyboardEvent) => (keys.current[e.code] = false)
     const lockChange = () => {
       const g = useGame.getState()
-      if (!document.pointerLockElement && g.screen === 'game' && g.view === 'world' && !g.paused && !g.phoneOpen && !g.notebookOpen && !g.call && !g.timeSkip) {
+      if (!document.pointerLockElement && g.screen === 'game' && g.view === 'world' && !g.paused && !g.phoneOpen && !g.notebookOpen && !g.call && !g.timeSkip && !g.minigame) {
         g.setInspect(null)
         g.setPaused(true)
       }

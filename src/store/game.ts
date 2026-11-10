@@ -52,6 +52,7 @@ interface State {
   cinematic: number | null // inizio della scena del lockdown (performance.now)
   call: { id: CallId; ringing: boolean } | null // videochiamata di Teo
   timeSkip: number | null // inizio del salto di tempo (performance.now)
+  minigame: 'rackCable' | null // minigioco fisico aperto
   notebookOpen: boolean
   toast: string | null
   hovered: string | null
@@ -64,6 +65,7 @@ interface State {
   setCinematic: (t: number | null) => void
   setCall: (c: State['call']) => void
   setTimeSkip: (t: number | null) => void
+  setMinigame: (m: State['minigame']) => void
   log: (from: ChatMsg['from'], text: string) => void
   setInspect: (i: State['inspect']) => void
   setNotebook: (o: boolean) => void
@@ -112,17 +114,19 @@ export const useGame = create<State>()(
       cinematic: null,
       call: null,
       timeSkip: null,
+      minigame: null,
       notebookOpen: false,
       toast: null,
       hovered: null,
       note: null,
 
-      setScreen: (screen) => set({ screen, paused: false, phoneOpen: false, notebookOpen: false, inspect: null, call: null, timeSkip: null, cinematic: null }),
+      setScreen: (screen) => set({ screen, paused: false, phoneOpen: false, notebookOpen: false, inspect: null, call: null, timeSkip: null, cinematic: null, minigame: null }),
       setView: (view) => set({ view }),
       setPaused: (paused) => set({ paused }),
       setCinematic: (cinematic) => set({ cinematic }),
       setCall: (call) => set({ call, phoneOpen: false, notebookOpen: false, inspect: null }),
       setTimeSkip: (timeSkip) => set({ timeSkip }),
+      setMinigame: (minigame) => set({ minigame, phoneOpen: false, notebookOpen: false }),
       // registra nel telefono senza notifica (es. la trascrizione di una videochiamata)
       log: (from, text) => {
         const p = get().progress

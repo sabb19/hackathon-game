@@ -158,11 +158,9 @@ export function inspectAction() {
       g.say('teo', 'Hai il taccuino? Ada ci scriveva tutto, spiegato meglio di qualsiasi corso.')
       return
     case 'rack':
-      g.setFlag('cablePlugged')
+      // minigioco: trovare la porta giusta e innestare il cavo (vedi ui/RackCable)
       sfx.click()
-      g.setInspect({ ...ins, action: undefined })
-      g.say('teo', 'Ho visto la lucina diventare verde! Torna al PC e rimanda il messaggio di prova.')
-      g.goto('m1_verify')
+      g.setMinigame('rackCable')
       return
     case 'cabinet':
       g.setFlag('foundSandbox')
