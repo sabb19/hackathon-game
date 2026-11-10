@@ -16,6 +16,8 @@ export type StepId =
   | 'm3_bruno'
   | 'm3_mailbox'
   | 'm3_meeting'
+  | 'm4_cams'
+  | 'm4_logs'
   | 'end'
 
 interface Step {
@@ -168,10 +170,24 @@ export const STEPS: Record<StepId, Step> = {
     onEnter: [{ from: 'teo', text: "Fatto: account di Bruno bloccato. E il sistema mi risponde di nuovo: ti ho aperto la sala riunioni. Guarda lo schermo, c'è ancora la riunione di lunedì." }],
     hints: ['La sala riunioni è a nord-ovest, dietro la parete a vetri vicino all\'ufficio di Ada. Guarda lo schermo sul muro.'],
   },
+  m4_cams: {
+    chapter: "Capitolo 5 — L'ufficio di Teo",
+    goal: 'Guarda le registrazioni delle telecamere',
+    objective: "Teo ha aperto il suo ufficio: il monitor delle telecamere ha registrato la notte. Rimetti in ordine i fotogrammi e capisci chi c'era al piano alle 23:31.",
+    onEnter: [{ from: 'teo', text: "Ti ho aperto il mio ufficio, a est dell'open space. Sul muro c'è il monitor delle telecamere: guarda cosa hanno visto stanotte." }],
+    hints: ["L'ufficio di Teo è quello a vetri sul lato est dell'open space. Clicca il monitor sul muro.", "Ordina i fotogrammi dall'orario più presto al più tardi: le cifre leggibili e i dettagli (luci, serrande) ti aiutano."],
+  },
+  m4_logs: {
+    chapter: "Capitolo 5 — L'ufficio di Teo",
+    goal: 'Leggi i log della notte',
+    objective: 'Le telecamere dicono che nessuno è entrato fisicamente. Allora la risposta è nei log: apri "Log della notte" al PC e rispondi alle domande.',
+    onEnter: [{ from: 'teo', text: 'Nessuno al piano alle 23:31… quindi sono entrati dalla rete. Ti ho condiviso i log di stanotte: al PC, "Log della notte".' }],
+    hints: ['Al PC apri "Log della notte". Usa i filtri per sorgente: VPN per gli accessi da fuori, SANDBOX-7 per cosa cercavano.', 'Cerca le righe con bruno.rossi: da quale indirizzo entra? Cosa chiede a SANDBOX-7?'],
+  },
   end: { chapter: 'Fine della demo', goal: 'Fine della demo', objective: 'Fine della demo.', hints: [] },
 }
 
-export const STEP_ORDER: StepId[] = ['m0_arrive', 'm0_watch', 'm0_ada', 'm0_coffee', 'm0_stairs', 'm0_login', 'm0_password', 'm1_lab', 'm1_plug', 'm1_verify', 'm2_monitor', 'm2_locate', 'm3_bruno', 'm3_mailbox', 'm3_meeting', 'end']
+export const STEP_ORDER: StepId[] = ['m0_arrive', 'm0_watch', 'm0_ada', 'm0_coffee', 'm0_stairs', 'm0_login', 'm0_password', 'm1_lab', 'm1_plug', 'm1_verify', 'm2_monitor', 'm2_locate', 'm3_bruno', 'm3_mailbox', 'm3_meeting', 'm4_cams', 'm4_logs', 'end']
 export const stepIndex = (s: StepId) => STEP_ORDER.indexOf(s)
 
 // Dove deve andare il giocatore adesso (per l'indicatore nel mondo). null = al computer / nessun bersaglio.
@@ -191,6 +207,8 @@ export function targetFor(step: StepId, flags: Record<string, boolean>): string 
     case 'm3_bruno': return 'brunoMail'
     case 'm3_mailbox': return 'computer'
     case 'm3_meeting': return 'meetingTv'
+    case 'm4_cams': return 'cctv'
+    case 'm4_logs': return 'computer'
     case 'm2_locate': return !flags.checkedCopier ? 'copier' : flags.followedCable ? 'cabinet' : 'rack'
     default: return null
   }

@@ -1155,6 +1155,10 @@ function Building({ mode }: { mode: WorldMode }) {
   const tvTex = useMemo(() => textTexture(['RIUNIONE DI LUNEDÌ', 'Sicurezza Q3: 0 incidenti!', '', 'Prossimo punto:', 'formazione phishing', 'RIMANDATA (di nuovo)'], { w: 512, h: 288, bg: '#10233a', color: '#cfe0f0', font: '600 28px "Inter Tight"', pad: 26, lineHeight: 1.25 }), [])
   const PD = L.PLAYER_DESK
   const catPhoto = useMemo(() => adaCatPhoto(), [])
+  const cctvTex = useMemo(
+    () => ['CAM-1 OPEN SPACE', 'CAM-2 CORRIDOIO', 'CAM-3 ARCHIVIO', 'CAM-4 SALA SERVER'].map((n) => textTexture([n, '', 'REC ●  registrazione', 'della notte'], { w: 512, h: 280, bg: '#16201c', color: '#9ab0a6', font: '500 30px "JetBrains Mono"', pad: 24, lineHeight: 1.3 })),
+    [],
+  )
   const phishTex = useMemo(
     () => textTexture(['HALDEN NETCARE', '', 'Da: supporto@halden-netcare-it.com', 'URGENTE: account bloccato', 'tra 30 minuti', '', 'Gentile utente,', 'conferma la password...', '', 'fatto! — B.'], { w: 420, h: 594, bg: '#f7f5ef', color: '#1c1f24', font: '500 22px "Inter Tight"', pad: 28, lineHeight: 1.45 }),
     [],
@@ -1288,7 +1292,16 @@ function Building({ mode }: { mode: WorldMode }) {
       <ServerRoom m={m} />
 
       {/* UFFICIO DI TEO (cap. 5) */}
-      <Desk p={[11, 0, -1]} ry={Math.PI / 2} persona="boss" saver />
+      <Desk p={[11, 0, -1]} ry={Math.PI / 2} persona="boss" partition={false} saver />
+      {/* parete dei monitor delle telecamere (capitolo 5) */}
+      <Hit id="cctv" position={[13.9, 1.7, -1]} rotation={[0, -Math.PI / 2, 0]}>
+        {[[-0.58, 0.33], [0.58, 0.33], [-0.58, -0.33], [0.58, -0.33]].map(([x, y], i) => (
+          <group key={i} position={[x, y, 0]}>
+            <mesh material={m.black}><boxGeometry args={[1.12, 0.64, 0.05]} /></mesh>
+            <mesh position={[0, 0, 0.027]}><planeGeometry args={[1.06, 0.58]} /><meshStandardMaterial map={cctvTex[i]} emissiveMap={cctvTex[i]} emissive="#ffffff" emissiveIntensity={0.7} /></mesh>
+          </group>
+        ))}
+      </Hit>
       <Plant p={[13.4, 0, -3.4]} s={1.1} m={m} />
 
       {/* CUCINETTA: la macchina del caffè è guasta (per questo, nel prologo, esci a cercarne un'altra) */}

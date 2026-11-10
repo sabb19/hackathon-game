@@ -12,19 +12,21 @@ import Explorer, { FileView } from './apps/Explorer'
 import NetLab from './apps/NetLab'
 import NetMonitor from './apps/NetMonitor'
 import BrunoMail from './apps/BrunoMail'
+import NightLogs from './apps/NightLogs'
 
 type File = Extract<FsNode, { type: 'file' }>
-type AppId = 'mail' | 'explorer' | 'netlab' | 'monitor' | 'brunomail'
+type AppId = 'mail' | 'explorer' | 'netlab' | 'monitor' | 'brunomail' | 'nightlogs'
 
 const APPS: Record<AppId, { title: string; icon: IconName; unlock: StepId; lockedWhy: string; w: number; h: number }> = {
   mail: { title: 'Posta', icon: 'mail', unlock: 'm0_login', lockedWhy: '', w: 760, h: 480 },
   explorer: { title: 'Esplora file', icon: 'folder', unlock: 'm0_login', lockedWhy: '', w: 720, h: 460 },
   netlab: { title: 'Laboratorio di rete', icon: 'network', unlock: 'm1_lab', lockedWhy: 'Il Laboratorio di rete si attiva dopo il cambio password di emergenza.', w: 1060, h: 640 },
+  nightlogs: { title: 'Log della notte', icon: 'table', unlock: 'm4_logs', lockedWhy: 'Teo non ha ancora condiviso i log della notte.', w: 1120, h: 560 },
   brunomail: { title: 'Posta di Bruno', icon: 'mail', unlock: 'm3_mailbox', lockedWhy: 'La posta di un collega si apre solo se Teo te ne dà accesso.', w: 1080, h: 560 },
   monitor: { title: 'Monitor di rete', icon: 'monitor', unlock: 'm2_monitor', lockedWhy: 'Il Monitor di rete ha bisogno di una connessione con SECURITY-01. Al momento il tuo PC non lo raggiunge.', w: 1000, h: 600 },
 }
-const ORDER: AppId[] = ['mail', 'explorer', 'netlab', 'monitor', 'brunomail']
-const APP_COLOR: Record<AppId, string> = { mail: '#2f6db5', explorer: '#b07a2a', netlab: '#c8641e', monitor: '#2f8a5b', brunomail: '#7a3a8a' }
+const ORDER: AppId[] = ['mail', 'explorer', 'netlab', 'monitor', 'brunomail', 'nightlogs']
+const APP_COLOR: Record<AppId, string> = { mail: '#2f6db5', explorer: '#b07a2a', netlab: '#c8641e', monitor: '#2f8a5b', brunomail: '#7a3a8a', nightlogs: '#3d5a7a' }
 const DESK_FOLDERS = (FS as Extract<typeof FS, { type: 'dir' }>).children.filter((c) => c.type === 'dir').map((c) => c.name)
 
 interface Win {
@@ -124,7 +126,7 @@ export default function Desktop() {
     setStartOpen(false)
     const a = APPS[id]
     if (si < stepIndex(a.unlock)) return setDialog(a.lockedWhy)
-    const body = id === 'mail' ? <Mail /> : id === 'explorer' ? <Explorer openFile={openFile} /> : id === 'netlab' ? <NetLab /> : id === 'brunomail' ? <BrunoMail /> : <NetMonitor />
+    const body = id === 'mail' ? <Mail /> : id === 'explorer' ? <Explorer openFile={openFile} /> : id === 'netlab' ? <NetLab /> : id === 'brunomail' ? <BrunoMail /> : id === 'nightlogs' ? <NightLogs /> : <NetMonitor />
     add({ key: id, title: a.title, icon: a.icon, w: a.w, h: a.h, body })
   }
   // solo sviluppo: aprire le app da console per i controlli visivi

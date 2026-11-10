@@ -121,6 +121,7 @@ export const TARGET_POINT: Record<string, V3> = {
   copier: [-9, 1.25, 7.3],
   brunoMail: [-3.32, 0.95, 5.2],
   meetingTv: [-9.5, 1.5, -11.8],
+  cctv: [13.85, 1.7, -1],
   lightSwitch: [-8.15, 1.25, 3.5],
 }
 

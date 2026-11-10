@@ -28,6 +28,6 @@
 | 2 | Cavo nel Rack B (etichette, LED) | Laboratorio di rete in 3 tappe | ✔ |
 | 3 | **Etichette dei dispositivi**: la stampante dell'archivio, poi il dispositivo nell'armadio, confrontati con il MAC visto al monitor | Monitor di rete (carte d'identità) | ✔ |
 | 4 | Email stampata sulla scrivania di Bruno: cerchia gli indizi (mittente, link, urgenza) | Posta di Bruno: smista e rispondi all'incidente | ✔ |
-| 5 | Monitor delle telecamere: ordina i fotogrammi | Linea del tempo dei log | da fare |
+| 5 | Monitor delle telecamere: ordina i fotogrammi, chi c'era alle 23:31? | Log della notte: filtri e 3 domande, rivelazione honeypot | ✔ |
 | 6 | Lettore badge delle scale: lista di chi passa (regole) | Il buttafuori (firewall) | da fare |
 | 7 | Ridividi i cavi del rack per zone di colore | Topologia con meno aiuti, scelta finale | da fare |

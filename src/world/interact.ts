@@ -14,7 +14,7 @@ const beforeLock = (step: Parameters<typeof stepIndex>[0]) => stepIndex(step) < 
 export type InteractId =
   | 'computer' | 'postit' | 'door' | 'display' | 'adaDesk' | 'adaPhoto' | 'whiteboard' | 'rack' | 'cabinet' | 'window' | 'cooler'
   | 'board' | 'coffee' | 'adaBox'
-  | 'lightSwitch' | 'adaCalendar' | 'copier' | 'brunoMail' | 'meetingTv'
+  | 'lightSwitch' | 'adaCalendar' | 'copier' | 'brunoMail' | 'meetingTv' | 'cctv'
   | 'door_ada' | 'door_server' | 'door_tech' | 'door_meeting' | 'door_teo' | 'door_exit'
 
 const DOOR_IDS = ['door_ada', 'door_server', 'door_tech', 'door_meeting', 'door_teo', 'door_exit'] as const
@@ -52,6 +52,7 @@ export function promptFor(id: InteractId): string | null {
     case 'adaCalendar': return 'Guarda il calendario'
     case 'brunoMail': return p.step === 'm3_bruno' ? 'Leggi il foglio stampato' : 'Il foglio di Bruno'
     case 'meetingTv': return p.step === 'm3_meeting' ? 'Guarda la presentazione' : null
+    case 'cctv': return p.step === 'm4_cams' ? 'Guarda le registrazioni' : 'Monitor delle telecamere'
     case 'copier': return p.step === 'm2_locate' && !p.flags.checkedCopier ? "Controlla l'etichetta" : null
     case 'adaPhoto': return 'Guarda la foto'
     case 'whiteboard': return 'Guarda la lavagna'
@@ -139,14 +140,17 @@ export function interact(id: InteractId) {
       if (step !== 'm3_meeting') return
       inspectAt('meetingTv')
       g.say('teo', "\"Sicurezza Q3: zero incidenti\". E guarda la slide dopo: 'formazione phishing — rimandata'. Ada l'aveva chiesta tre volte.")
-      g.say('teo', 'Abbiamo capito come sono entrati. Ora devo capire cosa hanno fatto, e perché Ada aveva preparato una trappola. Dammi un attimo.')
-      g.goto('end')
+      g.say('teo', 'Abbiamo capito come sono entrati. Ora capiamo cosa hanno fatto, e perché Ada aveva preparato una trappola.')
       setTimeout(() => {
         const s = useGame.getState()
         s.setInspect(null)
-        if (document.pointerLockElement) document.exitPointerLock()
-        s.setScreen('demoEnd')
-      }, 9000)
+        s.goto('m4_cams')
+      }, 6000)
+      return
+    case 'cctv':
+      if (step !== 'm4_cams') return
+      sfx.click()
+      g.setMinigame('cctv')
       return
     case 'copier':
       if (step !== 'm2_locate' || p.flags.checkedCopier) return

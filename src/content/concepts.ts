@@ -1,5 +1,5 @@
 // Pagine del taccuino di Ada. Prima il concetto (chiaro), poi la metafora, poi la nota a margine (simpatica).
-export type ConceptId = 'ping' | 'autenticazione' | 'password' | 'rete' | 'switch' | 'pacchetto' | 'ip' | 'router' | 'mac' | 'inventario' | 'phishing'
+export type ConceptId = 'ping' | 'autenticazione' | 'password' | 'rete' | 'switch' | 'pacchetto' | 'ip' | 'router' | 'mac' | 'inventario' | 'phishing' | 'log' | 'honeypot'
 
 export interface Concept {
   title: string
@@ -10,7 +10,7 @@ export interface Concept {
   margin: string
 }
 
-export const CONCEPT_ORDER: ConceptId[] = ['ping', 'autenticazione', 'password', 'rete', 'switch', 'pacchetto', 'ip', 'router', 'mac', 'inventario', 'phishing']
+export const CONCEPT_ORDER: ConceptId[] = ['ping', 'autenticazione', 'password', 'rete', 'switch', 'pacchetto', 'ip', 'router', 'mac', 'inventario', 'phishing', 'log', 'honeypot']
 
 export const CONCEPTS: Record<ConceptId, Concept> = {
   ping: {
@@ -112,6 +112,28 @@ export const CONCEPTS: Record<ConceptId, Concept> = {
     ],
     analogy: "Un pescatore non ti prende con la forza: ti mostra un'esca che sembra cibo.",
     margin: 'Nessun IT serio vi chiederà mai la password per email. Nemmeno io. Soprattutto io.',
+  },
+  log: {
+    title: 'Log',
+    tab: 'Log',
+    short: 'Il diario dei sistemi: chi ha fatto cosa, quando, da dove.',
+    body: [
+      'Ogni sistema scrive righe brevi con ora, utente e azione: accessi, errori, file aperti. Messe in fila, raccontano una storia.',
+      'Per capire un incidente si incrociano più log (porte, rete, server): quello che uno non vede, lo vede un altro.',
+    ],
+    analogy: 'Le telecamere di un negozio: da sole non fermano il ladro, ma dopo ti dicono da dove è entrato.',
+    margin: 'Leggere i log è noioso. Finché non trovi la riga che cercavi.',
+  },
+  honeypot: {
+    title: 'Honeypot',
+    tab: 'Esca',
+    short: "Un finto bersaglio messo apposta per attirare e scoprire chi attacca.",
+    body: [
+      "Un honeypot sembra un sistema interessante (dati, backup), ma non contiene niente di vero. Nessuno dovrebbe mai toccarlo: chi lo fa, si tradisce.",
+      "Quando qualcuno lo tocca, scatta l'allarme e i difensori sanno subito che c'è un intruso, e dove.",
+    ],
+    analogy: 'Il barattolo di miele lasciato apposta: dove si posano le api, lì le trovi.',
+    margin: 'SANDBOX-7 era il mio barattolo di miele. Se avete letto fin qui, ha funzionato. — A.',
   },
   mac: {
     title: 'Indirizzo MAC',
