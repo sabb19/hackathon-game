@@ -12,33 +12,34 @@ export const CALL_TITLE: Record<CallId, string> = {
 }
 
 export const CALLS: Record<CallId, (name: string) => CallNode[]> = {
+  // Le informazioni importanti sono sempre nelle battute di Teo: le risposte cambiano solo il tono.
   handover: (name) => [
     {
-      text: `Eccoti, ${name}! Ti vedo dalla telecamera dell'open space. Benvenuto/a al primo turno di notte.`,
+      text: `Eccoti, ${name}! Ti vedo dalla telecamera. Stanotte sei tu il tecnico di turno: il primo turno di notte da solo/a.`,
       replies: [
-        { label: 'Ciao Teo!', answer: 'Ti spiego tutto in un minuto, poi vado a dormire.' },
-        { label: 'Mi vedi?', answer: 'Ci sono telecamere su tutto il piano. Io guardo da casa, tu guardi i sistemi.' },
+        { label: 'Sono pronto/a.', answer: 'Bene. Ti spiego tutto in un minuto, poi vado a dormire.' },
+        { label: 'Un po\' di ansia…', answer: 'Normale. Di notte non succede quasi mai niente. Ti spiego tutto in un minuto.' },
       ],
     },
     {
-      text: 'Il lavoro: tieni d\'occhio le reti dei nostri clienti, ambulatori e scuole. Se qualcosa diventa arancione, mi chiami.',
+      text: 'Halden Netcare gestisce le reti informatiche di ambulatori e scuole. Il tuo lavoro: sorvegliarle dal PC. Se qualcosa diventa arancione, mi chiami.',
       replies: [
-        { label: 'E se non succede niente?', answer: 'Di solito non succede niente. È il bello del turno di notte.' },
-        { label: 'Arancione vuol dire guaio?', answer: 'Arancione vuol dire "chiamami". Il guaio lo decidiamo insieme.' },
+        { label: 'Solo guardare?', answer: 'Solo guardare. E chiamarmi se serve. Le riparazioni le facciamo di giorno.' },
+        { label: 'Arancione = guaio?', answer: 'Arancione vuol dire "chiamami". Il guaio lo decidiamo insieme.' },
       ],
     },
     {
-      text: 'Le credenziali del PC sono sul post-it attaccato al monitor. Sì, lo so. Ne parliamo domani.',
+      text: 'Vedi l\'ufficio a vetri sul lato ovest? Era di Ada Ferri. È lei che ha costruito tutta la nostra rete. È andata in pensione sei mesi fa, e nessuno ha ancora svuotato il suo ufficio.',
       replies: [
-        { label: 'Non è molto sicuro…', answer: 'Lo so, lo so. Domani la cambi, promesso.' },
-        { label: 'Chi ha impostato i PC?', answer: 'Ada Ferri. Ha costruito tutta la nostra rete. È in pensione da sei mesi: il suo ufficio è ancora com\'era.' },
+        { label: 'Com\'era Ada?', answer: 'Geniale e testarda. Annotava tutto su un taccuino. Senza di lei, qui, nessuno sa davvero come sta in piedi la rete.' },
+        { label: 'Perché è ancora tutto lì?', answer: 'Nessuno ha avuto il coraggio di toccare le sue cose. Né i suoi sistemi.' },
       ],
     },
     {
-      text: 'Ultima cosa: nel locale tecnico c\'è un vecchio armadio. Non toccarlo.',
+      text: 'Le credenziali del tuo PC sono sul post-it attaccato al monitor. Sì, lo so. E una regola: nel locale tecnico c\'è un vecchio armadio di Ada. Non toccarlo.',
       replies: [
         { label: 'Ricevuto.', answer: 'Perfetto. Buon turno, ci sentiamo domattina!' },
-        { label: 'Perché?', answer: 'Era roba di Ada, nessuno sa cosa fa. E se funziona, non si tocca. Buon turno!' },
+        { label: 'Cosa c\'è dentro?', answer: 'Non lo sa nessuno. Funziona, e quello che funziona non si tocca. Buon turno!' },
       ],
     },
   ],

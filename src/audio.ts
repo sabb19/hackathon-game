@@ -92,6 +92,45 @@ export const sfx = {
     n.start(t)
   },
   // allarme dell'edificio: due toni, lontano (filtrato) e intermittente — non un ronzio continuo
+  // "voce a sillabe": una sillaba breve e intonata, filtrata come una vocale. Niente parole, solo il ritmo del parlato.
+  // mood: 'calm' = grave e rilassata, 'tense' = più acuta e rapida. rise = fine di una domanda.
+  syllable(vowel: string, seed: number, mood: 'calm' | 'tense' = 'calm', rise = false) {
+    const c = ac()
+    const t = c.currentTime
+    const F1: Record<string, number> = { a: 780, e: 520, i: 320, o: 500, u: 360 }
+    const F2: Record<string, number> = { a: 1250, e: 1850, i: 2200, o: 900, u: 800 }
+    const v = F1[vowel] ? vowel : 'a'
+    const base = mood === 'calm' ? 88 : 108 // voce adulta, grave
+    const f0 = base * (1 + (seed % 5) * 0.022) * (rise ? 1.18 : 1)
+    const dur = mood === 'calm' ? 0.13 : 0.1
+    const o = c.createOscillator()
+    o.type = 'sawtooth'
+    o.frequency.setValueAtTime(f0 * (rise ? 0.92 : 1.04), t)
+    o.frequency.linearRampToValueAtTime(rise ? f0 * 1.08 : f0 * 0.94, t + dur)
+    const g = c.createGain()
+    g.gain.setValueAtTime(0, t)
+    g.gain.linearRampToValueAtTime(0.2, t + 0.022)
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur)
+    // meno squillante: taglio delle alte, formanti di un tratto vocale adulto
+    const lp = c.createBiquadFilter()
+    lp.type = 'lowpass'
+    lp.frequency.value = 2200
+    const out = c.createGain()
+    out.gain.value = 0.9
+    for (const [f, q, lvl] of [[F1[v] * 0.88, 4, 1], [F2[v] * 0.88, 6, 0.35]] as [number, number, number][]) {
+      const bp = c.createBiquadFilter()
+      bp.type = 'bandpass'
+      bp.frequency.value = f
+      bp.Q.value = q
+      const lg = c.createGain()
+      lg.gain.value = lvl
+      g.connect(bp).connect(lg).connect(out)
+    }
+    o.connect(g)
+    out.connect(lp).connect(master!)
+    o.start(t)
+    o.stop(t + dur + 0.03)
+  },
   // squillo del telefono: trillo morbido, due volte ogni 3 secondi
   ringStart() {
     if (ringTimer) return

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useGame } from '../store/game'
 import { CALLS, CALL_TITLE, type CallId } from '../content/calls'
 import { sfx } from '../audio'
@@ -20,6 +20,9 @@ function VoiceBars({ talking }: { talking: boolean }) {
     </div>
   )
 }
+
+// Tono della voce di Teo in ogni chiamata
+const VOICE_MOOD: Record<CallId, 'calm' | 'tense'> = { handover: 'calm', lockdown: 'tense' }
 
 type Line = { who: 'teo' | 'tu'; text: string }
 
@@ -46,7 +49,16 @@ function Call({ id, name }: { id: CallId; name: string }) {
       return () => clearTimeout(t)
     }
     if (chars < l.text.length) {
-      const t = setTimeout(() => setChars((c) => Math.min(l.text.length, c + 2)), 28)
+      // voce a sillabe: un suono ogni ~4 lettere, pause sulla punteggiatura
+      const chunk = l.text.slice(chars, chars + 2)
+      const ahead = l.text.slice(chars, chars + 5).toLowerCase()
+      const vowel = ahead.match(/[aeiouàèéìòù]/)?.[0]?.normalize('NFD')[0]
+      if (vowel && chars % (VOICE_MOOD[id] === 'calm' ? 6 : 4) === 0) {
+        const q = l.text.trimEnd().endsWith('?') && chars > l.text.length - 8
+        sfx.syllable(vowel, chars + shown * 3, VOICE_MOOD[id], q)
+      }
+      const pause = /[.!?…]/.test(chunk) ? 300 : /[,:;]/.test(chunk) ? 150 : VOICE_MOOD[id] === 'calm' ? 42 : 30
+      const t = setTimeout(() => setChars((c) => Math.min(l.text.length, c + 2)), pause)
       return () => clearTimeout(t)
     }
     const t = setTimeout(() => {
@@ -54,7 +66,7 @@ function Call({ id, name }: { id: CallId; name: string }) {
       setChars(0)
     }, 450)
     return () => clearTimeout(t)
-  }, [typing, shown, chars, lines])
+  }, [typing, shown, chars, lines, id])
   useEffect(() => {
     box.current?.scrollTo({ top: box.current.scrollHeight })
   }, [shown, chars])
@@ -81,45 +93,74 @@ function Call({ id, name }: { id: CallId; name: string }) {
     lockPointer()
   }
   const ended = node >= nodes.length
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => {
+      if (typing) return
+      if (ended && (e.code === 'Enter' || e.code === 'KeyE')) return close()
+      const n = e.code === 'Digit1' ? 0 : e.code === 'Digit2' ? 1 : -1
+      const r = !ended && nodes[node].replies[n]
+      if (r) reply(r)
+    }
+    window.addEventListener('keydown', k)
+    return () => window.removeEventListener('keydown', k)
+  })
   const mm = String(Math.floor(secs / 60)).padStart(2, '0')
   const ss = String(secs % 60).padStart(2, '0')
 
   return (
-    <div data-call className="absolute inset-0 z-40 bg-ink/70 flex items-center justify-center p-6" onClick={skip}>
-      <style>{`@keyframes voiceBar{from{height:4px}to{height:30px}}`}</style>
-      <div className="w-full max-w-2xl bg-cream text-ink fade-up shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="bg-ink text-cream flex items-center gap-4 px-5 py-4">
-          <div className="flex-1">
-            <div className="kicker text-[12px] text-cream/60 flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-ok animate-pulse" />Chiamata in corso · {mm}:{ss}</div>
-            <div className="font-display font-black uppercase text-[26px] leading-none mt-1">Teo Marchi</div>
-            <div className="text-[13px] text-cream/60">Supervisore · da casa</div>
+    <div data-call className="absolute inset-0 z-40 bg-ink/35" onClick={skip}>
+      <style>{`@keyframes voiceBar{from{height:3px}to{height:22px}}`}</style>
+      <PhoneShell>
+        {/* intestazione della chiamata */}
+        <div className="px-4 pt-4 pb-3 bg-ink text-cream">
+          <div className="flex items-center justify-between">
+            <span className="kicker text-[11px] text-cream/60 flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-ok animate-pulse" />In chiamata</span>
+            <span className="font-mono text-[12px] text-cream/70">{mm}:{ss}</span>
           </div>
-          <VoiceBars talking={typing && lines[shown]?.who === 'teo'} />
-        </div>
-        <div className="flex flex-col min-h-[360px] max-h-[70vh]">
-          <div className="flex items-stretch border-b-2 border-ink">
-            <span className="sign-num text-2xl flex items-center">☎</span>
-            <span className="font-display font-black uppercase text-xl px-4 py-2">{CALL_TITLE[id]}</span>
-          </div>
-          <div ref={box} className="flex-1 overflow-y-auto p-5 space-y-3" onClick={skip}>
-            {lines.slice(0, shown + 1).map((l, i) => {
-              const text = i < shown ? l.text : l.who === 'teo' ? l.text.slice(0, chars) : l.text
-              if (i === shown && !typing) return null
-              return l.who === 'teo' ? (
-                <p key={i} className="text-[17px] leading-snug max-w-[92%]">{text}</p>
-              ) : (
-                <p key={i} className="text-[15px] font-semibold text-right ml-auto max-w-[80%] bg-ink text-cream px-3 py-1.5">{text}</p>
-              )
-            })}
-          </div>
-          <div className="p-4 border-t border-ink/15 min-h-[76px] flex flex-wrap gap-2 items-center">
-            {typing && <span className="font-mono text-[13px] text-ink/50">clic per saltare</span>}
-            {!typing && !ended && nodes[node].replies.map((r) => (
-              <button key={r.label} className="btn btn-signal" onClick={() => reply(r)}>{r.label}</button>
-            ))}
-            {!typing && ended && <button className="btn btn-signal" onClick={close} autoFocus>Chiudi la chiamata</button>}
+          <div className="flex items-end justify-between mt-1">
+            <div>
+              <div className="font-display font-black uppercase text-[24px] leading-none">Teo Marchi</div>
+              <div className="text-[12px] text-cream/60 mt-0.5">Supervisore · {CALL_TITLE[id].toLowerCase()}</div>
+            </div>
+            <VoiceBars talking={typing && lines[shown]?.who === 'teo'} />
           </div>
         </div>
+        {/* trascrizione */}
+        <div ref={box} className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-1.5">
+          {lines.slice(0, shown + 1).map((l, i) => {
+            if (i === shown && !typing) return null
+            const text = i < shown ? l.text : l.who === 'teo' ? l.text.slice(0, chars) : l.text
+            return (
+              <div key={i} className={`max-w-[88%] px-3 py-2 text-[14px] leading-snug rounded-2xl ${l.who === 'tu' ? 'self-end bg-steel text-cream rounded-br-sm' : 'self-start bg-white rounded-bl-sm'}`}>
+                {text}
+              </div>
+            )
+          })}
+        </div>
+        {/* risposte */}
+        <div className="p-3 border-t border-black/10 bg-[#dcd5c6] min-h-[64px] flex flex-col gap-1.5" onClick={(e) => e.stopPropagation()}>
+          {typing && <button className="text-[12px] font-mono text-ink/50 py-2" onClick={skip}>clic per saltare</button>}
+          {!typing && !ended && nodes[node].replies.map((r, i) => (
+            <button key={r.label} className="w-full rounded-full bg-ink text-cream text-[14px] py-2 px-3 text-left hover:bg-signal hover:text-ink" onClick={() => reply(r)}>
+              <span className="text-cream/50 mr-2 font-mono">{i + 1}</span>{r.label}
+            </button>
+          ))}
+          {!typing && ended && (
+            <button className="w-full rounded-full bg-bad text-cream text-[14px] py-2 font-semibold" onClick={close} autoFocus>Riaggancia</button>
+          )}
+        </div>
+      </PhoneShell>
+    </div>
+  )
+}
+
+// Stesso telefono del gioco (Tab), alzato in primo piano durante le chiamate.
+function PhoneShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="absolute right-8 bottom-6 w-[340px] fade-up" onClick={(e) => e.stopPropagation()}>
+      <div className="rounded-[34px] bg-[#1c1d20] p-3 pb-5 shadow-[0_30px_80px_rgba(0,0,0,0.7)] border border-black">
+        <div className="h-8 flex items-center justify-center"><span className="w-16 h-1.5 rounded-full bg-black/60" /></div>
+        <div className="rounded-[22px] bg-[#ece7dc] text-ink overflow-hidden h-[500px] flex flex-col">{children}</div>
       </div>
     </div>
   )
@@ -142,15 +183,17 @@ function Ringing({ id }: { id: CallId }) {
     return () => window.removeEventListener('keydown', k)
   })
   return (
-    <div className="absolute inset-0 z-40 flex items-end justify-center pb-16 bg-ink/30">
-      <div className="bg-cream text-ink fade-up flex items-stretch shadow-2xl">
-        <div className="bg-ink text-cream px-5 flex items-center"><span className="w-3 h-3 rounded-full bg-ok animate-ping" /></div>
-        <div className="px-5 py-3">
-          <div className="kicker text-[13px] text-ink/60">Chiamata in arrivo</div>
-          <div className="font-display font-black uppercase text-2xl leading-none mt-1">Teo Marchi</div>
+    <div className="absolute inset-0 z-40 bg-ink/20">
+      <PhoneShell>
+        <div className="flex-1 bg-ink text-cream flex flex-col items-center justify-center gap-2 phone-buzz">
+          <div className="kicker text-[12px] text-cream/60">Chiamata in arrivo</div>
+          <div className="font-display font-black uppercase text-[34px] leading-none">Teo Marchi</div>
+          <div className="text-[13px] text-cream/60">Supervisore</div>
         </div>
-        <button className="btn btn-signal m-3" onClick={answer} autoFocus>Rispondi</button>
-      </div>
+        <div className="bg-ink pb-8 flex justify-center">
+          <button className="w-16 h-16 rounded-full bg-ok text-ink font-display font-black uppercase text-[13px] animate-pulse" onClick={answer} autoFocus>Rispondi</button>
+        </div>
+      </PhoneShell>
     </div>
   )
 }
