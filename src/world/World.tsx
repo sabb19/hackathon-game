@@ -537,9 +537,9 @@ function PlayerDesk({ m, lockdown, mode }: { m: Mats; lockdown: boolean; mode: W
         </mesh>
       </Hit>
       {/* lampada snodata */}
-      <group position={[-0.7, 0.79, -0.2]}>
-        <Model id="desk_lamp_arm_01" rotation={[0, 0.6, 0]} />
-        <spotLight position={[0.1, 0.62, 0.2]} angle={0.95} penumbra={0.7} intensity={7} distance={4} color="#ffb867" castShadow shadow-mapSize={[512, 512]} shadow-bias={-0.0006} shadow-normalBias={0.02} />
+      <group position={[0.86, 0.79, -0.3]}>
+        <Model id="desk_lamp_arm_01" rotation={[0, -0.6, 0]} />
+        <spotLight position={[-0.1, 0.62, 0.2]} angle={0.95} penumbra={0.7} intensity={7} distance={4} color="#ffb867" castShadow shadow-mapSize={[512, 512]} shadow-bias={-0.0006} shadow-normalBias={0.02} />
       </group>
       {/* telefono fisso a tasti (muto), tazza, carte */}
       {mode !== 'title' && <CustomModel name="phone" position={[0.78, 0.79, 0.05]} rotation={[0, -0.35, 0]} />}
@@ -547,7 +547,7 @@ function PlayerDesk({ m, lockdown, mode }: { m: Mats; lockdown: boolean; mode: W
         <>
           <Mug position={[0.86, 0.79, 0.36]} />
           <Model id="office_notepads" pick={['office_notepads_yellow_pad']} position={[-0.58, 0.79, 0.24]} rotation={[0, 0.2, 0]} />
-          <Model id="stationery_supplies" pick={PENCILCUP} position={[0.82, 0.79, -0.3]} />
+          <Model id="stationery_supplies" pick={PENCILCUP} position={[-0.78, 0.79, -0.28]} />
         </>
       )}
       {mode !== 'title' && <Chair p={[0, 0, 0.85]} ry={Math.PI} tint="#2c3440" />}

@@ -76,9 +76,9 @@ export const DOORS: DoorDef[] = [
 export const PLAYER_DESK = { x: 1, z: 5 } // la tua postazione (prima fila, rivolta a nord)
 export const ARRIVE: V3 = [0, 1.6, 9.7] // appena uscito/a dall'ascensore
 export const START: V3 = [PLAYER_DESK.x, 1.6, PLAYER_DESK.z + 1.6]
-// titolo: bassa, di tre quarti lungo la fila di scrivanie; la lampada accesa e gli oggetti cliccabili in primo piano
-export const TITLE_POS: V3 = [PLAYER_DESK.x + 1.3, 1.25, PLAYER_DESK.z + 0.9]
-export const TITLE_LOOK: V3 = [PLAYER_DESK.x - 0.2, 0.9, PLAYER_DESK.z - 0.2]
+// titolo: la scrivania frontale, come se ti stessi sedendo; oggetti cliccabili sul piano
+export const TITLE_POS: V3 = [PLAYER_DESK.x, 1.6, PLAYER_DESK.z + 1.25]
+export const TITLE_LOOK: V3 = [PLAYER_DESK.x, 0.85, PLAYER_DESK.z - 0.05]
 
 export const ADA_DESK = { x: -11.5, z: -1 } // rivolta a est (Ada sedeva con le finestre alle spalle)
 export const RACK_B = { x: 3, z: -10.6 } // fila nord della sala server, rivolta a sud
