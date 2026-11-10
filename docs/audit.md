@@ -35,6 +35,12 @@ Regola guida (dal direttore): **ogni interazione deve avere senso e divertire**:
 - Ricollegare il cavo nel rack è un clic: va trasformato in un minigioco fisico.
 - Tutte le azioni "prendi/apri" sono clic singoli: da rivedere una per una con un gesto che abbia senso.
 
+## Stato (fine giornata)
+- Sprint 1 ✔ — B1–B3, prologo in quattro momenti (console di sorveglianza con il ping, archivio e Ada), titoli dei capitoli.
+- Sprint 2 ✔ — RELAY in stile Windows, B4, B5, Laboratorio di rete leggibile.
+- Sprint 3 ✔ (primo minigioco) — cavo del Rack B. Da fare: cassetto di Ada (tastierino, cap. 1), armadio di SANDBOX-7, etichette dei dispositivi (cap. 3).
+- Sprint 4 ✔ (prima passata) — soffitto e plafoniere, parete della sorveglianza, pilastri, cucinetta e archivio arredati; corretto il bagliore arancione sui telai delle porte.
+
 ## Piano di lavoro (sprint)
 1. **Bug e prologo** — B1–B3; prologo in quattro momenti (il turno al PC, Ada e l'archivio, la notte, chiuso dentro); titoli dei capitoli.
 2. **RELAY come un Windows** — desktop con sfondo, cartelle vere sul desktop e in Esplora file (documenti con la storia), barra delle applicazioni con orologio e area notifiche, finestre che stanno nello schermo; obiettivo e telefono che non coprono nulla; Laboratorio di rete e Monitor ridisegnati.

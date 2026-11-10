@@ -138,7 +138,11 @@ export const FURNITURE: [number, number, number, number][] = [
   [13.3, 14, 3.6, 7.0], // cucinetta + frigo
   [13.2, 14, 7.2, 7.9], // distributore
   [-9.4, -8.6, 7.1, 7.9], // stampante
-  [-13.8, -11.4, 2.05, 2.7], // cassettiere archivio
+  [-13.8, -11.6, 2.05, 2.7], // cassettiere archivio
+  [-14, -13.5, 6.1, 8], // scaffale dei faldoni
+  [3.3, 6.7, 7.4, 8], // parete della sorveglianza (mobile basso)
+  [-6.25, -5.75, 2.25, 2.75], [5.75, 6.25, 2.25, 2.75], // pilastri
+  [10.1, 11.1, 4.9, 5.9], // tavolino della cucinetta
   [10.5, 11.5, -2, 0], // scrivania di Teo
   [13.0, 14, -9, -7], // condizionatore della sala server
   [-5, -4.3, -8.5, -6.5], // cassettiere del locale tecnico

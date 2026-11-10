@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { useGame } from '../store/game'
 import { inspectAction, interact, type InteractId } from './interact'
-import { carpetTexture, ceilingTexture, cityTexture, noticeBoardTexture, textTexture } from './textures'
+import { carpetTexture, ceilingTexture, cityTexture, noticeBoardTexture, plasterTexture, textTexture } from './textures'
 import { stepIndex, targetFor, unlockLevel } from '../content/steps'
 import { lockPointer } from './pointer'
 import { sfx } from '../audio'
@@ -72,10 +72,14 @@ function Hit({ id, children, position, rotation }: { id: InteractId; children: R
     ref.current?.traverse((n) => {
       const mesh = n as THREE.Mesh
       const mat = mesh.material as THREE.MeshStandardMaterial | undefined
-      if (!mesh.isMesh || !mat || !('emissive' in mat) || mat.emissiveMap || (!mesh.userData.own && mat.emissive.getHex() !== 0)) return
-      if (!mesh.userData.own) {
-        mesh.material = mat.clone() // materiale proprio: non illuminare tutte le copie del modello
-        mesh.userData.own = true
+      if (!mesh.isMesh || !mat || !('emissive' in mat) || mat.emissiveMap) return
+      // materiale proprio: non illuminare tutte le copie (e se React ha rimesso quello condiviso, riclonarlo)
+      if (mesh.material !== mesh.userData.ownMat) {
+        if (!mesh.userData.ownMat && mat.emissive.getHex() !== 0) return // LED e schermi: già luminosi, non si toccano
+        const c = mat.clone()
+        c.emissive.set('#000000')
+        mesh.material = c
+        mesh.userData.ownMat = c
       }
       const m2 = mesh.material as THREE.MeshStandardMaterial
       m2.emissive.set(active ? '#E8823A' : '#000000')
@@ -119,7 +123,7 @@ function Carpet({ p, w, d }: { p: [number, number]; w: number; d: number }) {
 const CEIL_X = [-12.5, -9.5, -6.5, -3, 0.5, 3.5, 6.5, 9.5, 12.5]
 const CEIL_Z = [-10.5, -8, -5.5, -2.5, 0.5, 3.5, 6.5, 9.5]
 function Ceiling() {
-  const mat = useMemo(() => new THREE.MeshStandardMaterial({ map: ceilingTexture(28 / 0.6, 23 / 0.6), roughness: 0.95 }), [])
+  const mat = useMemo(() => new THREE.MeshStandardMaterial({ map: ceilingTexture(28 / 0.6, 23 / 0.6), roughness: 0.95, emissive: '#2a2f38', emissiveIntensity: 1 }), [])
   const on = useRef<THREE.InstancedMesh>(null)
   const off = useRef<THREE.InstancedMesh>(null)
   const cells = useMemo(() => {
@@ -148,11 +152,11 @@ function Ceiling() {
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, L.CEILING, -0.5]} material={mat}><planeGeometry args={[28, 23]} /></mesh>
       <instancedMesh ref={on} args={[undefined, undefined, nOn]} frustumCulled={false}>
         <planeGeometry args={[1.2, 0.6]} />
-        <meshStandardMaterial color="#fff6e6" emissive="#fff1d6" emissiveIntensity={0.35} />
+        <meshStandardMaterial color="#ffffff" emissive="#fff3dc" emissiveIntensity={1.6} toneMapped={false} />
       </instancedMesh>
       <instancedMesh ref={off} args={[undefined, undefined, cells.length - nOn]} frustumCulled={false}>
         <planeGeometry args={[1.2, 0.6]} />
-        <meshStandardMaterial color="#b9bcbf" />
+        <meshStandardMaterial color="#8d9094" emissive="#1c2027" />
       </instancedMesh>
     </group>
   )
@@ -744,7 +748,7 @@ function ServerRoom({ m }: { m: Mats }) {
         {open && <mesh position={[0, 0.735, 0.252]}><planeGeometry args={[0.2, 0.05]} /><meshStandardMaterial map={sbLabel} /></mesh>}
         <pointLight position={[0, 0.9, 0.5]} color="#E8823A" intensity={open ? 1 : 0} distance={1.8} />
       </Hit>
-      {[-7, -8].map((z) => <Model key={z} id="drawer_cabinet" position={[-4.65, 0, z]} rotation={[0, Math.PI / 2, 0]} />)}
+      {[-7.05, -7.95].map((z) => <FilingCabinet key={z} p={[-4.7, 0, z]} ry={Math.PI / 2} />)}
       {/* il cavo grigio, più vecchio degli altri: dalla porta 7 del Rack B, sotto il muro, fino all'armadio */}
       <mesh>
         <tubeGeometry args={[cable, 96, 0.008, 6, false]} />
@@ -848,6 +852,113 @@ function Shutters({ lockdown, level }: { lockdown: boolean; level: number }) {
 
 const POTTED = ['potted_plant_02_pot', 'potted_plant_02_leaves', 'potted_plant_02_dirt']
 
+// Armadio metallico a 4 cassetti (archivio, uffici). open = un cassetto lasciato aperto.
+const FC_BODY = new THREE.MeshStandardMaterial({ color: '#8f959b', roughness: 0.45, metalness: 0.55 })
+const FC_DRAWER = new THREE.MeshStandardMaterial({ color: '#a3a9af', roughness: 0.4, metalness: 0.5 })
+const FC_HANDLE = new THREE.MeshStandardMaterial({ color: '#2a2e33', roughness: 0.3, metalness: 0.8 })
+const FC_LABEL = new THREE.MeshStandardMaterial({ color: '#efe6c8', roughness: 0.9 })
+function FilingCabinet({ p, ry = 0, open = false }: { p: V3; ry?: number; open?: boolean }) {
+  return (
+    <group position={p} rotation={[0, ry, 0]}>
+      <mesh position={[0, 0.66, 0]} material={FC_BODY} castShadow receiveShadow><boxGeometry args={[0.46, 1.32, 0.6]} /></mesh>
+      {[0, 1, 2, 3].map((i) => {
+        const out = open && i === 1 ? 0.32 : 0
+        return (
+          <group key={i} position={[0, 0.2 + i * 0.31, 0.3 + out]}>
+            <mesh material={FC_DRAWER}><boxGeometry args={[0.42, 0.28, 0.02]} /></mesh>
+            {out > 0 && <mesh position={[0, -0.02, -0.16]} material={FC_BODY}><boxGeometry args={[0.4, 0.22, 0.3]} /></mesh>}
+            <mesh position={[0, 0.04, 0.015]} material={FC_HANDLE}><boxGeometry args={[0.16, 0.025, 0.02]} /></mesh>
+            <mesh position={[0, 0.095, 0.011]} material={FC_LABEL}><planeGeometry args={[0.09, 0.04]} /></mesh>
+          </group>
+        )
+      })}
+    </group>
+  )
+}
+
+// Scaffale metallico con faldoni colorati
+const SHELF_MAT = new THREE.MeshStandardMaterial({ color: '#6f757c', roughness: 0.5, metalness: 0.6 })
+const BINDER_COLORS = ['#2B4A6B', '#7a4a3a', '#3c5a46', '#c9b07a', '#4b5157', '#2B4A6B', '#8a3a2a']
+function Shelf({ p, ry = 0 }: { p: V3; ry?: number }) {
+  const binders = useMemo(() => {
+    const out: { x: number; y: number; c: string; h: number }[] = []
+    for (let row = 0; row < 4; row++) {
+      let x = -0.85
+      let k = row * 3
+      while (x < 0.8) {
+        const w = 0.07
+        if ((k * 7 + row) % 9 !== 0) out.push({ x: x + w / 2, y: 0.12 + row * 0.5, c: BINDER_COLORS[(k * 3 + row) % BINDER_COLORS.length], h: 0.3 + ((k * 5) % 3) * 0.02 })
+        x += w + 0.008
+        k++
+      }
+    }
+    return out
+  }, [])
+  const mats = useMemo(() => Object.fromEntries(BINDER_COLORS.map((c) => [c, new THREE.MeshStandardMaterial({ color: c, roughness: 0.8 })])), [])
+  return (
+    <group position={p} rotation={[0, ry, 0]}>
+      {[0, 1, 2, 3, 4].map((i) => <mesh key={i} position={[0, 0.1 + i * 0.5, 0]} material={SHELF_MAT} castShadow><boxGeometry args={[1.8, 0.025, 0.4]} /></mesh>)}
+      {[-0.9, 0.9].map((x) => <mesh key={x} position={[x, 1.1, 0]} material={SHELF_MAT}><boxGeometry args={[0.03, 2.2, 0.4]} /></mesh>)}
+      {binders.map((b, i) => (
+        <mesh key={i} position={[b.x, b.y + b.h / 2, 0.02]} material={mats[b.c]}><boxGeometry args={[0.065, b.h, 0.28]} /></mesh>
+      ))}
+    </group>
+  )
+}
+
+// Parete della sorveglianza nell'open space: le reti dei clienti, sempre sotto gli occhi del tecnico di turno.
+const NOC_SITES = ['VALLE VERDE', 'FERRARIS', 'RODARI', 'GALVANI', 'FARMACIA C.', 'POLIAMB. EST']
+function nocTexture(name: string, lockdown: boolean) {
+  const c = document.createElement('canvas')
+  c.width = 512
+  c.height = 288
+  const g = c.getContext('2d')!
+  g.fillStyle = lockdown ? '#2a1408' : '#0f1a26'
+  g.fillRect(0, 0, 512, 288)
+  g.fillStyle = lockdown ? '#E8823A' : '#9fc0d8'
+  g.font = '800 40px "Big Shoulders Display"'
+  g.fillText(lockdown ? 'COLLEGAMENTO PERSO' : name, 28, 58)
+  // piccolo grafico del traffico
+  g.strokeStyle = lockdown ? '#6b3a1a' : '#6FBF8E'
+  g.lineWidth = 4
+  g.beginPath()
+  for (let i = 0; i <= 20; i++) {
+    const y = 200 - (lockdown ? 0 : Math.abs(Math.sin(i * 0.9 + name.length) * 70 + ((i * 37) % 23)))
+    i ? g.lineTo(28 + i * 22, y) : g.moveTo(28, y)
+  }
+  g.stroke()
+  g.fillStyle = lockdown ? '#E8823A' : '#6FBF8E'
+  g.beginPath()
+  g.arc(470, 46, 14, 0, Math.PI * 2)
+  g.fill()
+  g.font = '500 24px "JetBrains Mono"'
+  g.fillText(lockdown ? 'B2 isolato' : 'tutto ok', 28, 260)
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
+}
+function NocWall({ lockdown }: { lockdown: boolean }) {
+  const texs = useMemo(() => NOC_SITES.map((n) => nocTexture(n, lockdown)), [lockdown])
+  const title = useMemo(() => textTexture(['SORVEGLIANZA RETI CLIENTI'], { w: 1024, h: 96, color: '#d8d2c4', font: '800 64px "Big Shoulders Display"', align: 'center' }), [])
+  const frame = useMemo(() => new THREE.MeshStandardMaterial({ color: '#15181c', roughness: 0.5 }), [])
+  return (
+    <group position={[5, 0, 7.915]} rotation={[0, Math.PI, 0]}>
+      <mesh position={[0, 2.88, 0.01]}><planeGeometry args={[3.6, 0.34]} /><meshStandardMaterial map={title} transparent /></mesh>
+      {texs.map((t, i) => {
+        const col = i % 3
+        const row = Math.floor(i / 3)
+        return (
+          <group key={i} position={[(col - 1) * 1.16, 2.33 - row * 0.67, 0.03]}>
+            <mesh material={frame}><boxGeometry args={[1.12, 0.65, 0.05]} /></mesh>
+            <mesh position={[0, 0, 0.027]}><planeGeometry args={[1.06, 0.596]} /><meshStandardMaterial map={t} emissiveMap={t} emissive="#ffffff" emissiveIntensity={0.85} /></mesh>
+          </group>
+        )
+      })}
+      <mesh position={[0, 0.45, 0.25]} castShadow><boxGeometry args={[3.4, 0.9, 0.5]} /><meshStandardMaterial color="#3a3f46" roughness={0.6} /></mesh>
+    </group>
+  )
+}
+
 // Telecamera di sicurezza: ruota lentamente per seguirti, il LED rosso dice che Teo ti sta guardando.
 function TeoCam({ p }: { p: V3 }) {
   const ref = useRef<THREE.Group>(null)
@@ -930,6 +1041,9 @@ function Building({ mode }: { mode: WorldMode }) {
   const wb = useMemo(() => textTexture(['GIORNI SENZA INCIDENTI:  0', '', '[UFFICI]—sw—ROUTER—sw—[SERVER]', '', '"due quartieri, un ponte" — A.'], { w: 1024, h: 512, bg: '#eeeeea', color: '#1d3a63', font: '700 52px Caveat', pad: 36, lineHeight: 1.25 }), [])
   const tvTex = useMemo(() => textTexture(['RIUNIONE DI LUNEDÌ', '', 'Sicurezza Q3: 0 incidenti!', '(speriamo)'], { w: 512, h: 288, bg: '#10233a', color: '#cfe0f0', font: '600 34px "Inter Tight"', pad: 30, lineHeight: 1.3 }), [])
   const PD = L.PLAYER_DESK
+  const pillarMat = useMemo(() => new THREE.MeshStandardMaterial({ map: plasterTexture(0.6, 1.3), roughness: 0.9 }), [])
+  const cabinetMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#d8d4ca', roughness: 0.55 }), [])
+  const cabinetDoor = useMemo(() => new THREE.MeshStandardMaterial({ color: '#e4e0d6', roughness: 0.5 }), [])
   // le luci dell'archivio restano accese fino al prologo (le spegni tu); dopo il lockdown restano spente
   const archiveDark = useGame((s) => !!s.progress?.flags.archiveDark || !!s.progress?.flags.lockdown) || mode === 'title'
 
@@ -1002,6 +1116,8 @@ function Building({ mode }: { mode: WorldMode }) {
       <Model id="potted_plant_02" pick={POTTED} position={[7.4, 0, -3.4]} />
       <Model id="metal_trash_can" pick={['metal_trash_can', 'metal_trash_can_lid']} position={[-4.5, 0, 2.5]} scale={0.5} />
       <Model id="metal_trash_can" pick={['metal_trash_can', 'metal_trash_can_lid']} position={[2.5, 0, 2.5]} scale={0.5} />
+      <NocWall lockdown={lockdown} />
+      {[-6, 6].map((x) => <Box key={x} p={[x, L.CEILING / 2, 2.5]} s={[0.5, L.CEILING, 0.5]} m={pillarMat} cast />)}
       {/* l'occhio di Teo: telecamere che ti seguono */}
       {mode !== 'title' && (
         <>
@@ -1013,7 +1129,7 @@ function Building({ mode }: { mode: WorldMode }) {
 
       {/* UFFICIO DI ADA (cap. 1) */}
       <AdaDesk m={m} />
-      <Model id="drawer_cabinet" position={[-13, 0, -3.6]} />
+      <FilingCabinet p={[-13, 0, -3.62]} />
       <Plant p={[-8.7, 0, 1.4]} s={1.1} m={m} />
       <pointLight position={[-11, 2.9, -1]} color="#ffe2b8" intensity={lockdown ? 0.3 : 0.7} distance={7} decay={1.6} />
 
@@ -1053,7 +1169,17 @@ function Building({ mode }: { mode: WorldMode }) {
           }}
         />
       </Hit>
-      <Box p={[13.75, 1.95, L.KITCHEN.z]} s={[0.3, 0.05, 2.4]} m={m.metal} />
+      <Box p={[13.8, 1.95, L.KITCHEN.z]} s={[0.34, 0.05, 2.4]} m={m.metal} />
+      <Box p={[13.8, 2.3, L.KITCHEN.z]} s={[0.34, 0.66, 2.4]} m={cabinetMat} cast />
+      {[-0.8, 0, 0.8].map((dz) => <Box key={dz} p={[13.625, 2.3, L.KITCHEN.z + dz]} s={[0.01, 0.6, 0.76]} m={cabinetDoor} />)}
+      <group position={[10.6, 0, 5.4]}>
+        <mesh position={[0, 0.74, 0]} castShadow><cylinderGeometry args={[0.4, 0.4, 0.03, 28]} /><meshStandardMaterial color="#d9d3c5" roughness={0.5} /></mesh>
+        <mesh position={[0, 0.37, 0]} material={m.metal}><cylinderGeometry args={[0.03, 0.03, 0.72, 10]} /></mesh>
+        <mesh position={[0, 0.01, 0]} material={m.metal}><cylinderGeometry args={[0.24, 0.24, 0.02, 20]} /></mesh>
+        <Chair p={[-0.65, 0, 0.1]} ry={-Math.PI / 2 - 0.3} />
+        <Chair p={[0.62, 0, -0.15]} ry={Math.PI / 2 + 0.2} />
+        <Mug position={[0.1, 0.755, 0.08]} />
+      </group>
       <mesh position={[13.75, 1.92, L.KITCHEN.z]} rotation={[Math.PI / 2, 0, 0]}><planeGeometry args={[0.12, 2.2]} /><meshStandardMaterial color="#fff1d6" emissive="#ffe2b0" emissiveIntensity={1.2} /></mesh>
       <pointLight position={[13.2, 1.8, L.KITCHEN.z]} color="#ffd9a0" intensity={1.1} distance={5} decay={1.5} />
       <Hit id="cooler" position={[13.6, 0, 7.55]}>
@@ -1074,7 +1200,9 @@ function Building({ mode }: { mode: WorldMode }) {
           }}
         />
       </Hit>
-      {[-13.4, -12.6].map((x) => <Model key={x} id="drawer_cabinet" position={[x, 0, 2.4]} />)}
+      {[-13.45, -12.95, -12.45, -11.95].map((x, i) => <FilingCabinet key={x} p={[x, 0, 2.36]} open={i === 2} />)}
+      {/* scaffale di faldoni sotto la finestra ovest dell'archivio */}
+      <Shelf p={[-13.72, 0, 7.05]} ry={Math.PI / 2} />
       <CustomModel name="copier" position={[-9, 0, 7.5]} rotation={[0, Math.PI, 0]} />
       <Hit id="adaBox" position={[L.ADA_BOX.x, 0, L.ADA_BOX.z]} rotation={[0, 0.25, 0]}>
         <CustomModel
@@ -1088,7 +1216,7 @@ function Building({ mode }: { mode: WorldMode }) {
           }}
         />
       </Hit>
-      <Plant p={[-13.3, 0, 7.4]} s={1.2} m={m} />
+      <Plant p={[-13.3, 0, 3.15]} s={1.1} m={m} />
       <Hit id="lightSwitch" position={L.LIGHT_SWITCH} rotation={[0, -Math.PI / 2, 0]}>
         <mesh><boxGeometry args={[0.09, 0.13, 0.015]} /><meshStandardMaterial color="#e8e4da" roughness={0.6} /></mesh>
         <mesh position={[0, archiveDark ? -0.015 : 0.015, 0.012]} rotation={[archiveDark ? 0.25 : -0.25, 0, 0]}><boxGeometry args={[0.03, 0.045, 0.012]} /><meshStandardMaterial color="#d8d3c6" /></mesh>
@@ -1250,7 +1378,7 @@ function Scene({ mode }: { mode: WorldMode }) {
     <>
       <color attach="background" args={['#0a0e15']} />
       <fog attach="fog" args={['#0a0e15', 12, 34]} />
-      <ambientLight color="#3a4a66" intensity={lockdown ? 0.4 : 0.5} />
+      <ambientLight color="#3a4a66" intensity={lockdown ? 0.45 : 0.62} />
       <hemisphereLight args={['#6f7f99', '#2a241e', 0.5]} />
       {/* luci di cortesia notturne dal controsoffitto: sempre presenti, cambiano solo intensità */}
       <pointLight position={[-1, 3.0, 2.5]} color="#ffe9c8" intensity={lockdown ? 0.15 : 0.9} distance={9} decay={1.6} />
