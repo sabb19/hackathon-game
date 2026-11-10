@@ -27,3 +27,44 @@ export function Icon({ name, size = 20, className = '' }: { name: IconName; size
     </svg>
   )
 }
+
+// Icone "piene" del desktop e di Esplora file (cartella color carta da pacchi, file bianco).
+export function FolderGlyph({ size = 44, locked = false }: { size?: number; locked?: boolean }) {
+  return (
+    <svg viewBox="0 0 48 48" width={size} height={size} aria-hidden="true">
+      <path d="M4 12a2 2 0 012-2h12l4 4h20a2 2 0 012 2v4H4z" fill="#c89a4a" />
+      <path d="M4 18h40v20a2 2 0 01-2 2H6a2 2 0 01-2-2z" fill="#e3b765" />
+      <path d="M4 18h40v3H4z" fill="#f0c97a" />
+      {locked && (
+        <g transform="translate(28 24)">
+          <rect x="0" y="6" width="14" height="11" rx="1.5" fill="#1a1b1d" />
+          <path d="M3 6V4a4 4 0 018 0v2" stroke="#1a1b1d" strokeWidth="2.2" fill="none" />
+        </g>
+      )}
+    </svg>
+  )
+}
+export function FileGlyph({ size = 40, table = false }: { size?: number; table?: boolean }) {
+  return (
+    <svg viewBox="0 0 48 48" width={size} height={size} aria-hidden="true">
+      <path d="M10 4h20l8 8v32H10z" fill="#f7f4ec" stroke="#b9b2a2" strokeWidth="1.2" />
+      <path d="M30 4v8h8" fill="#e2dccd" stroke="#b9b2a2" strokeWidth="1.2" />
+      {table ? (
+        <g stroke="#3d8a5a" strokeWidth="1.6">
+          <rect x="15" y="18" width="18" height="18" fill="#dff0e4" />
+          <path d="M15 24h18M15 30h18M21 18v18" />
+        </g>
+      ) : (
+        <path d="M15 20h18M15 25h18M15 30h12" stroke="#8a8474" strokeWidth="1.8" />
+      )}
+    </svg>
+  )
+}
+// Riquadro colorato delle app (come le icone di un sistema operativo vero)
+export function AppTile({ name, color, size = 44, locked = false }: { name: IconName; color: string; size?: number; locked?: boolean }) {
+  return (
+    <span className="relative inline-flex items-center justify-center rounded-[8px] shadow-[0_2px_6px_rgba(0,0,0,0.35)]" style={{ width: size, height: size, background: locked ? '#5b6168' : color, color: '#fff' }}>
+      <Icon name={locked ? 'lock' : name} size={Math.round(size * 0.55)} />
+    </span>
+  )
+}

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { FS, type FsNode } from '../../content/files'
 import { INVENTORY } from '../../content/network'
-import { Icon } from '../icons'
+import { FileGlyph, FolderGlyph, Icon } from '../icons'
 
 type Dir = Extract<FsNode, { type: 'dir' }>
 type File = Extract<FsNode, { type: 'file' }>
@@ -29,8 +29,9 @@ export function FileView({ file }: { file: File }) {
   return <pre className="p-5 h-full overflow-auto bg-[#f4efe3] text-ink font-mono text-[14px] leading-relaxed whitespace-pre-wrap">{file.body}</pre>
 }
 
-export default function Explorer({ openFile }: { openFile: (f: File) => void }) {
-  const [path, setPath] = useState<Dir[]>([FS as Dir])
+export default function Explorer({ openFile, startAt }: { openFile: (f: File) => void; startAt?: string }) {
+  const start = startAt ? (FS as Dir).children.find((c): c is Dir => c.type === 'dir' && c.name === startAt) : undefined
+  const [path, setPath] = useState<Dir[]>(start ? [FS as Dir, start] : [FS as Dir])
   const [sel, setSel] = useState<string | null>(null)
   const [denied, setDenied] = useState<string | null>(null)
   const cur = path[path.length - 1]
@@ -84,7 +85,7 @@ export default function Explorer({ openFile }: { openFile: (f: File) => void }) 
                 onKeyDown={(e) => e.key === 'Enter' && open(n)}
                 className={`flex flex-col items-center gap-1 p-2 text-center ${sel === n.name ? 'bg-steel text-cream' : 'hover:bg-ink/10'}`}
               >
-                <Icon name={n.type === 'dir' ? (n.locked ? 'lock' : 'folder') : n.kind === 'table' ? 'table' : 'file'} size={34} />
+                {n.type === 'dir' ? <FolderGlyph size={44} locked={!!n.locked} /> : <FileGlyph size={40} table={n.kind === 'table'} />}
                 <span className="text-[12px] leading-tight break-all">{n.name}</span>
               </button>
             ))}

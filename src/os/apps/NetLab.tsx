@@ -169,8 +169,12 @@ export default function NetLab() {
   }, [p.cables, plugged])
 
   const toSvg = (e: { clientX: number; clientY: number }) => {
-    const r = svgRef.current!.getBoundingClientRect()
-    return { x: ((e.clientX - r.left) / r.width) * W, y: ((e.clientY - r.top) / r.height) * H }
+    // coordinate dello schema anche con zoom e bordi (viewBox diverso per tappa)
+    const svg = svgRef.current!
+    const m = svg.getScreenCTM()
+    if (!m) return { x: 0, y: 0 }
+    const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse())
+    return { x: pt.x, y: pt.y }
   }
   const deviceAt = (x: number, y: number) => LAB_DEVICES.find((d) => visible.includes(d.id) && Math.hypot(d.x - x, d.y - y) < 55)?.id ?? null
 
@@ -260,8 +264,9 @@ export default function NetLab() {
 
       <svg
         ref={svgRef}
-        viewBox={`0 0 ${W} ${H}`}
-        className="w-full h-full select-none touch-none"
+        // tappa 1: inquadra solo il quartiere degli uffici (lo schema riempie la finestra); poi tutta la rete
+        viewBox={stage === 1 ? `-10 0 430 ${H}` : `0 0 ${W} ${H}`}
+        className="w-full h-full select-none touch-none p-4"
         onPointerMove={(e) => drag && setDrag({ ...drag, ...toSvg(e) })}
         onPointerUp={(e) => {
           const pt = toSvg(e)
@@ -356,7 +361,7 @@ export default function NetLab() {
             ))}
           </div>
           <div className="kicker text-[13px]">Tappa {Math.min(stage, 3)} di 3 · {['Il quartiere', 'Il ponte', 'Il guasto'][Math.min(stage, 3) - 1]}</div>
-          <p className="text-[15px] font-semibold leading-snug mt-1">Obiettivo: far arrivare un messaggio dal tuo PC a {stage === 1 ? 'la stampante' : 'SECURITY-01, il server che comanda le porte'}.</p>
+          <p className="text-[15px] font-semibold leading-snug mt-1">Obiettivo: far arrivare un messaggio dal tuo PC {stage === 1 ? 'alla stampante' : 'a SECURITY-01, il server che comanda le porte'}.</p>
         </div>
         <div className="p-4 flex-1">
           <div className="kicker text-[13px] mb-1">Adesso</div>

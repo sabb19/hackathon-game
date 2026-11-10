@@ -24,7 +24,7 @@ export default function Phone() {
   return (
     <div
       className="absolute right-8 z-[75] w-[340px] transition-transform duration-300 ease-out"
-      style={{ bottom: atDesk ? 48 : 0, transform: open ? 'translateY(-24px)' : 'translateY(calc(100% - 46px))' }}
+      style={{ bottom: atDesk ? 48 : 0, transform: open ? 'translateY(-24px)' : atDesk ? 'translateY(calc(100% + 60px))' : 'translateY(calc(100% - 46px))' }}
     >
       <div className={`rounded-[34px] bg-[#1c1d20] p-3 pb-5 shadow-[0_30px_80px_rgba(0,0,0,0.7)] border border-black ${!open && unread ? 'phone-buzz' : ''}`}>
         <button className="w-full flex items-center justify-between px-4 h-8 font-display font-bold uppercase tracking-wide text-[14px] text-cream/70" onClick={() => useGame.getState().setPhone(!open)}>
