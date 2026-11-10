@@ -13,6 +13,9 @@ export type StepId =
   | 'm1_verify'
   | 'm2_monitor'
   | 'm2_locate'
+  | 'm3_bruno'
+  | 'm3_mailbox'
+  | 'm3_meeting'
   | 'end'
 
 interface Step {
@@ -138,10 +141,37 @@ export const STEPS: Record<StepId, Step> = {
       "Il cavo della porta 7 finisce nel locale tecnico: apri l'armadio e confronta l'etichetta del mini PC.",
     ],
   },
+  m3_bruno: {
+    chapter: "Capitolo 4 — L'esca",
+    goal: 'Controlla la scrivania di Bruno',
+    objective: "SANDBOX-7 ha registrato un accesso con le credenziali di Bruno, il commerciale. Bruno è a casa. Sulla sua scrivania c'è qualcosa di stampato.",
+    onEnter: [
+      { from: 'teo', text: "Ho letto il registro di SANDBOX-7: alle 23:31 qualcuno è entrato con le credenziali di Bruno. Ma Bruno è a casa, l'ho appena chiamato." },
+      { from: 'teo', text: "La sua scrivania è nella tua fila, l'ultima a sinistra (quella con la pizza). Guarda cosa ha lasciato." },
+    ],
+    hints: [
+      "La scrivania di Bruno è nella tua stessa fila, la più a sinistra. C'è un foglio stampato: cliccalo.",
+      'Cerchia le parti sospette: chi la manda davvero (il dominio), la fretta, il saluto, dove porta il link.',
+    ],
+  },
+  m3_mailbox: {
+    chapter: "Capitolo 4 — L'esca",
+    goal: 'Metti in sicurezza la posta di Bruno',
+    objective: 'Teo ti ha dato accesso alla posta di Bruno. Riconosci le email false e chiudi la porta da cui sono entrati.',
+    onEnter: [{ from: 'teo', text: 'Ti ho aperto la posta di Bruno sul tuo PC. Trova le email false e chiudi la porta da cui sono entrati.' }],
+    hints: ['Al PC apri "Posta di Bruno". Per ogni email guarda il mittente (la parte dopo @) e dove porta il link.', 'Le email di colleghi e clienti hanno domini veri: @haldennetcare.it, @farmaciacentrale.it.'],
+  },
+  m3_meeting: {
+    chapter: "Capitolo 4 — L'esca",
+    goal: 'Vai nella sala riunioni',
+    objective: 'Teo ha sbloccato la sala riunioni: sullo schermo è rimasta la presentazione di lunedì.',
+    onEnter: [{ from: 'teo', text: "Fatto: account di Bruno bloccato. E il sistema mi risponde di nuovo: ti ho aperto la sala riunioni. Guarda lo schermo, c'è ancora la riunione di lunedì." }],
+    hints: ['La sala riunioni è a nord-ovest, dietro la parete a vetri vicino all\'ufficio di Ada. Guarda lo schermo sul muro.'],
+  },
   end: { chapter: 'Fine della demo', goal: 'Fine della demo', objective: 'Fine della demo.', hints: [] },
 }
 
-export const STEP_ORDER: StepId[] = ['m0_arrive', 'm0_watch', 'm0_ada', 'm0_coffee', 'm0_stairs', 'm0_login', 'm0_password', 'm1_lab', 'm1_plug', 'm1_verify', 'm2_monitor', 'm2_locate', 'end']
+export const STEP_ORDER: StepId[] = ['m0_arrive', 'm0_watch', 'm0_ada', 'm0_coffee', 'm0_stairs', 'm0_login', 'm0_password', 'm1_lab', 'm1_plug', 'm1_verify', 'm2_monitor', 'm2_locate', 'm3_bruno', 'm3_mailbox', 'm3_meeting', 'end']
 export const stepIndex = (s: StepId) => STEP_ORDER.indexOf(s)
 
 // Dove deve andare il giocatore adesso (per l'indicatore nel mondo). null = al computer / nessun bersaglio.
@@ -158,6 +188,9 @@ export function targetFor(step: StepId, flags: Record<string, boolean>): string 
     case 'm1_verify':
     case 'm2_monitor': return 'computer'
     case 'm1_plug': return 'rack'
+    case 'm3_bruno': return 'brunoMail'
+    case 'm3_mailbox': return 'computer'
+    case 'm3_meeting': return 'meetingTv'
     case 'm2_locate': return !flags.checkedCopier ? 'copier' : flags.followedCable ? 'cabinet' : 'rack'
     default: return null
   }

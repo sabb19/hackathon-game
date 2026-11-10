@@ -100,6 +100,7 @@ export const VIEWS: Record<string, { pos: V3; look: V3 }> = {
   display: { pos: [-12.4, 2.0, 9.6], look: [-12.4, 2.0, 10.92] },
   adaDesk: { pos: [-12.45, 1.3, -1.62], look: [-11.8, 0.55, -1.62] },
   adaPhoto: { pos: [-12.3, 1.62, -3.1], look: [-12.3, 1.62, -3.92] },
+  meetingTv: { pos: [-9.5, 1.45, -10.2], look: [-9.5, 1.35, -11.92] },
   adaCalendar: { pos: [-10.6, 1.5, -3.05], look: [-10.6, 1.5, -3.92] },
   whiteboard: { pos: [WHITEBOARD.x, 1.6, 6.0], look: [WHITEBOARD.x, 1.55, 7.92] },
   rack: { pos: [RACK_B.x, 1.4, -9.4], look: [RACK_B.x, 1.2, -10.2] },
@@ -118,6 +119,8 @@ export const TARGET_POINT: Record<string, V3> = {
   cabinet: [CABINET.x, 1.2, -11.1],
   coffee: [13.6, 1.3, 4.55],
   copier: [-9, 1.25, 7.3],
+  brunoMail: [-3.32, 0.95, 5.2],
+  meetingTv: [-9.5, 1.5, -11.8],
   lightSwitch: [-8.15, 1.25, 3.5],
 }
 

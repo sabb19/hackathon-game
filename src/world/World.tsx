@@ -1152,9 +1152,13 @@ function Building({ mode }: { mode: WorldMode }) {
   const boardTex = useMemo(() => noticeBoardTexture(), [])
   const exitTex = useMemo(() => textTexture(['USCITA'], { w: 512, h: 160, bg: '#1f8a4c', color: '#f2fff4', font: '800 100px "Big Shoulders Display"', align: 'center', pad: 24 }), [])
   const wb = useMemo(() => textTexture(['GIORNI SENZA INCIDENTI:  0', '', '[UFFICI]—sw—ROUTER—sw—[SERVER]', '', '"due quartieri, un ponte" — A.'], { w: 1024, h: 512, bg: '#eeeeea', color: '#1d3a63', font: '700 52px Caveat', pad: 36, lineHeight: 1.25 }), [])
-  const tvTex = useMemo(() => textTexture(['RIUNIONE DI LUNEDÌ', '', 'Sicurezza Q3: 0 incidenti!', '(speriamo)'], { w: 512, h: 288, bg: '#10233a', color: '#cfe0f0', font: '600 34px "Inter Tight"', pad: 30, lineHeight: 1.3 }), [])
+  const tvTex = useMemo(() => textTexture(['RIUNIONE DI LUNEDÌ', 'Sicurezza Q3: 0 incidenti!', '', 'Prossimo punto:', 'formazione phishing', 'RIMANDATA (di nuovo)'], { w: 512, h: 288, bg: '#10233a', color: '#cfe0f0', font: '600 28px "Inter Tight"', pad: 26, lineHeight: 1.25 }), [])
   const PD = L.PLAYER_DESK
   const catPhoto = useMemo(() => adaCatPhoto(), [])
+  const phishTex = useMemo(
+    () => textTexture(['HALDEN NETCARE', '', 'Da: supporto@halden-netcare-it.com', 'URGENTE: account bloccato', 'tra 30 minuti', '', 'Gentile utente,', 'conferma la password...', '', 'fatto! — B.'], { w: 420, h: 594, bg: '#f7f5ef', color: '#1c1f24', font: '500 22px "Inter Tight"', pad: 28, lineHeight: 1.45 }),
+    [],
+  )
   const calendar = useMemo(() => adaCalendar(), [])
   const pillarMat = useMemo(() => new THREE.MeshStandardMaterial({ map: plasterTexture(0.6, 1.3), roughness: 0.9 }), [])
   const cabinetMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#d8d4ca', roughness: 0.55 }), [])
@@ -1204,7 +1208,12 @@ function Building({ mode }: { mode: WorldMode }) {
       <PlayerDesk m={m} lockdown={lockdown} mode={mode} />
       {mode === 'title' && <TitleProps m={m} />}
       <Desk p={[PD.x - 2, 0, PD.z]} persona="tidy" />
-      <Desk p={[PD.x - 4, 0, PD.z]} persona="messy" />
+      {/* la scrivania di Bruno: l'email di phishing che ha stampato (capitolo 4) */}
+      <Desk p={[PD.x - 4, 0, PD.z]} persona="messy">
+        <Hit id="brunoMail" position={[-0.32, 0.793, 0.2]} rotation={[0, 0.18, 0]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[0.21, 0.297]} /><meshStandardMaterial map={phishTex} roughness={0.9} /></mesh>
+        </Hit>
+      </Desk>
       <Desk p={[PD.x, 0, PD.z - 1]} ry={Math.PI} partition={false} persona="tidy" />
       <Desk p={[PD.x - 2, 0, PD.z - 1]} ry={Math.PI} partition={false} persona="plant" />
       <Desk p={[PD.x - 4, 0, PD.z - 1]} ry={Math.PI} partition={false} persona="empty" />
@@ -1261,6 +1270,7 @@ function Building({ mode }: { mode: WorldMode }) {
       <CustomModel name="meetingtable" position={[-9.5, 0, -8]} />
       {[-10.3, -9.5, -8.7].map((x) => <Chair key={`a${x}`} p={[x, 0, -8.75]} ry={0.05 * (x + 9.5)} />)}
       {[-10.3, -9.5, -8.7].map((x) => <Chair key={`b${x}`} p={[x, 0, -7.25]} ry={Math.PI + 0.08 * (x + 9.5)} />)}
+      <Hit id="meetingTv" position={[0, 0, 0]}>
       <CustomModel
         name="tv"
         position={[-9.5, 0, -11.92]}
@@ -1272,6 +1282,7 @@ function Building({ mode }: { mode: WorldMode }) {
           }
         }}
       />
+      </Hit>
 
       {/* SALA SERVER (cap. 2) e LOCALE TECNICO (cap. 3) */}
       <ServerRoom m={m} />

@@ -14,7 +14,7 @@ const beforeLock = (step: Parameters<typeof stepIndex>[0]) => stepIndex(step) < 
 export type InteractId =
   | 'computer' | 'postit' | 'door' | 'display' | 'adaDesk' | 'adaPhoto' | 'whiteboard' | 'rack' | 'cabinet' | 'window' | 'cooler'
   | 'board' | 'coffee' | 'adaBox'
-  | 'lightSwitch' | 'adaCalendar' | 'copier'
+  | 'lightSwitch' | 'adaCalendar' | 'copier' | 'brunoMail' | 'meetingTv'
   | 'door_ada' | 'door_server' | 'door_tech' | 'door_meeting' | 'door_teo' | 'door_exit'
 
 const DOOR_IDS = ['door_ada', 'door_server', 'door_tech', 'door_meeting', 'door_teo', 'door_exit'] as const
@@ -50,6 +50,8 @@ export function promptFor(id: InteractId): string | null {
     case 'display': return 'Guarda il display'
     case 'adaDesk': return p.flags.notebook ? 'Guarda la scrivania' : p.flags.adaDrawerOpen ? 'Prendi il taccuino' : 'Cassetto chiuso a codice'
     case 'adaCalendar': return 'Guarda il calendario'
+    case 'brunoMail': return p.step === 'm3_bruno' ? 'Leggi il foglio stampato' : 'Il foglio di Bruno'
+    case 'meetingTv': return p.step === 'm3_meeting' ? 'Guarda la presentazione' : null
     case 'copier': return p.step === 'm2_locate' && !p.flags.checkedCopier ? "Controlla l'etichetta" : null
     case 'adaPhoto': return 'Guarda la foto'
     case 'whiteboard': return 'Guarda la lavagna'
@@ -127,6 +129,24 @@ export function interact(id: InteractId) {
       return
     case 'cooler':
       sfx.rattle(0, 0.6)
+      return
+    case 'brunoMail':
+      if (step !== 'm3_bruno') return
+      sfx.click()
+      g.setMinigame('phishPrint')
+      return
+    case 'meetingTv':
+      if (step !== 'm3_meeting') return
+      inspectAt('meetingTv')
+      g.say('teo', "\"Sicurezza Q3: zero incidenti\". E guarda la slide dopo: 'formazione phishing — rimandata'. Ada l'aveva chiesta tre volte.")
+      g.say('teo', 'Abbiamo capito come sono entrati. Ora devo capire cosa hanno fatto, e perché Ada aveva preparato una trappola. Dammi un attimo.')
+      g.goto('end')
+      setTimeout(() => {
+        const s = useGame.getState()
+        s.setInspect(null)
+        if (document.pointerLockElement) document.exitPointerLock()
+        s.setScreen('demoEnd')
+      }, 9000)
       return
     case 'copier':
       if (step !== 'm2_locate' || p.flags.checkedCopier) return
@@ -206,13 +226,9 @@ export function sandboxFound() {
   {
       g.say('ada', 'Se state leggendo questo, la trappola ha funzionato. Non spegnetemi ancora: prima capite chi è entrato. — A.F.', 'Se state leggendo questo…')
       g.say('teo', '…A.F. È Ada. Ada Ferri. Ma è in pensione da sei mesi. Che cosa hai trovato là dentro?')
-      g.goto('end')
-      setTimeout(() => {
-        const s = useGame.getState()
-        s.setInspect(null)
-        if (document.pointerLockElement) document.exitPointerLock()
-        s.setScreen('demoEnd')
-      }, 6000)
+      // il capitolo 4 parte quando Teo ha letto il registro di SANDBOX-7
+      setTimeout(() => useGame.getState().goto('m3_bruno'), 7000)
+      lockPointer()
       return
   }
 }

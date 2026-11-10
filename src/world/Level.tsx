@@ -21,6 +21,7 @@ export function doorOpen(id: DoorId, step: StepId): boolean {
     case 'ada': return i >= stepIndex('m0_login')
     case 'server': return i >= stepIndex('m1_plug')
     case 'tech': return i >= stepIndex('m2_locate')
+    case 'meeting': return i >= stepIndex('m3_meeting')
     default: return false // scale, uscita, sala riunioni, ufficio di Teo: capitoli successivi
   }
 }

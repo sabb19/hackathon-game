@@ -1,5 +1,5 @@
 // Pagine del taccuino di Ada. Prima il concetto (chiaro), poi la metafora, poi la nota a margine (simpatica).
-export type ConceptId = 'ping' | 'autenticazione' | 'password' | 'rete' | 'switch' | 'pacchetto' | 'ip' | 'router' | 'mac' | 'inventario'
+export type ConceptId = 'ping' | 'autenticazione' | 'password' | 'rete' | 'switch' | 'pacchetto' | 'ip' | 'router' | 'mac' | 'inventario' | 'phishing'
 
 export interface Concept {
   title: string
@@ -10,7 +10,7 @@ export interface Concept {
   margin: string
 }
 
-export const CONCEPT_ORDER: ConceptId[] = ['ping', 'autenticazione', 'password', 'rete', 'switch', 'pacchetto', 'ip', 'router', 'mac', 'inventario']
+export const CONCEPT_ORDER: ConceptId[] = ['ping', 'autenticazione', 'password', 'rete', 'switch', 'pacchetto', 'ip', 'router', 'mac', 'inventario', 'phishing']
 
 export const CONCEPTS: Record<ConceptId, Concept> = {
   ping: {
@@ -101,6 +101,17 @@ export const CONCEPTS: Record<ConceptId, Concept> = {
     ],
     analogy: 'Il ponte (o l\'ufficio postale) che collega due città.',
     margin: 'Volevo chiamarlo GANDALF. "Tu non passerai", ma solo per i pacchetti cattivi. Ho perso la votazione.',
+  },
+  phishing: {
+    title: 'Phishing',
+    tab: 'Phishing',
+    short: "Un'esca: un messaggio falso che ti fa consegnare password o dati.",
+    body: [
+      'Il phishing imita qualcuno di cui ti fidi (il reparto IT, la banca, un corriere) per farti cliccare un link o inserire la password su una pagina falsa.',
+      'Segnali tipici: mittente con un dominio strano, fretta ("entro 30 minuti"), saluto generico, link che porta altrove. Logo e firma si copiano in un secondo: non provano niente.',
+    ],
+    analogy: "Un pescatore non ti prende con la forza: ti mostra un'esca che sembra cibo.",
+    margin: 'Nessun IT serio vi chiederà mai la password per email. Nemmeno io. Soprattutto io.',
   },
   mac: {
     title: 'Indirizzo MAC',

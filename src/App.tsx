@@ -15,6 +15,7 @@ import ChapterCard from './ui/ChapterCard'
 import RackCable from './ui/RackCable'
 import Keypad from './ui/Keypad'
 import LabelCheck from './ui/LabelCheck'
+import PhishPrint from './ui/PhishPrint'
 import { copierChecked, sandboxFound } from './world/interact'
 import { stepIndex } from './content/steps'
 import Loading from './ui/Loading'
@@ -50,6 +51,7 @@ export default function App() {
       {inGame && minigame === 'rackCable' && <RackCable />}
       {inGame && minigame === 'keypad' && <Keypad />}
       {inGame && minigame === 'labelCopier' && <LabelCheck id="labelCopier" onSolved={copierChecked} />}
+      {inGame && minigame === 'phishPrint' && <PhishPrint />}
       {inGame && minigame === 'labelSandbox' && <LabelCheck id="labelSandbox" onSolved={sandboxFound} />}
       {inGame && !callOrSkip && !(prologue && view === 'desktop') && <Phone />}
       {inGame && <Notification />}

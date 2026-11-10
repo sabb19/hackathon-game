@@ -18,6 +18,7 @@ export default function ChapterCard() {
     const first = prev.current === null
     prev.current = head
     if (first && head !== 'Prologo') return // ripresa di una partita: niente titolo
+    if (!head.startsWith('Capitolo') && head !== 'Prologo') return // fine della demo: niente titolo
     const sub = SUBTITLE[head] ?? chapter!.split(' — ')[1] ?? ''
     setShow({ head, sub, key: Date.now() })
   }, [head, chapter])
