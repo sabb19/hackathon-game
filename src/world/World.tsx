@@ -891,7 +891,7 @@ function PrologueDirector({ mode }: { mode: WorldMode }) {
   useFrame(() => {
     if (mode !== 'play') return
     const g = useGame.getState()
-    if (g.progress?.step !== 'm0_arrive' || g.call || g.timeSkip) return
+    if (g.progress?.step !== 'm0_arrive' || g.call || g.timeSkip || !g.progress.flags.tutMove) return
     if (Math.hypot(camera.position.x - L.PLAYER_DESK.x, camera.position.z - L.PLAYER_DESK.z - 0.6) < 1.6) {
       g.setCall({ id: 'handover', ringing: true })
     }
@@ -930,6 +930,8 @@ function Building({ mode }: { mode: WorldMode }) {
   const wb = useMemo(() => textTexture(['GIORNI SENZA INCIDENTI:  0', '', '[UFFICI]—sw—ROUTER—sw—[SERVER]', '', '"due quartieri, un ponte" — A.'], { w: 1024, h: 512, bg: '#eeeeea', color: '#1d3a63', font: '700 52px Caveat', pad: 36, lineHeight: 1.25 }), [])
   const tvTex = useMemo(() => textTexture(['RIUNIONE DI LUNEDÌ', '', 'Sicurezza Q3: 0 incidenti!', '(speriamo)'], { w: 512, h: 288, bg: '#10233a', color: '#cfe0f0', font: '600 34px "Inter Tight"', pad: 30, lineHeight: 1.3 }), [])
   const PD = L.PLAYER_DESK
+  // le luci dell'archivio restano accese fino al prologo (le spegni tu); dopo il lockdown restano spente
+  const archiveDark = useGame((s) => !!s.progress?.flags.archiveDark || !!s.progress?.flags.lockdown) || mode === 'title'
 
   return (
     <group>
@@ -1087,6 +1089,12 @@ function Building({ mode }: { mode: WorldMode }) {
         />
       </Hit>
       <Plant p={[-13.3, 0, 7.4]} s={1.2} m={m} />
+      <Hit id="lightSwitch" position={L.LIGHT_SWITCH} rotation={[0, -Math.PI / 2, 0]}>
+        <mesh><boxGeometry args={[0.09, 0.13, 0.015]} /><meshStandardMaterial color="#e8e4da" roughness={0.6} /></mesh>
+        <mesh position={[0, archiveDark ? -0.015 : 0.015, 0.012]} rotation={[archiveDark ? 0.25 : -0.25, 0, 0]}><boxGeometry args={[0.03, 0.045, 0.012]} /><meshStandardMaterial color="#d8d3c6" /></mesh>
+        <mesh position={[0, -0.05, 0.009]}><planeGeometry args={[0.012, 0.006]} /><meshStandardMaterial color="#E8823A" emissive="#E8823A" emissiveIntensity={1.5} /></mesh>
+      </Hit>
+      <pointLight position={[-11, 2.9, 5]} color="#fff1d6" intensity={archiveDark ? 0 : 2.2} distance={8} decay={1.4} />
 
       {/* CORRIDOIO: ascensori spenti, scale a ovest, uscita a est */}
       {[-1.2, 1.2].map((x) => (

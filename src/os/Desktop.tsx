@@ -106,6 +106,10 @@ export default function Desktop() {
     const body = id === 'mail' ? <Mail /> : id === 'explorer' ? <Explorer openFile={openFile} /> : id === 'netlab' ? <NetLab /> : <NetMonitor />
     add({ key: id, title: a.title, icon: a.icon, w: a.w, h: a.h, body })
   }
+  // solo sviluppo: aprire le app da console per i controlli visivi
+  useEffect(() => {
+    if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__os = { launch }
+  })
   const close = (key: string) => {
     setWins((ws) => ws.filter((w) => w.key !== key))
     setOrder((o) => o.filter((k) => k !== key))

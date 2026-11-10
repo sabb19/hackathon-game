@@ -1,5 +1,5 @@
 // Pagine del taccuino di Ada. Prima il concetto (chiaro), poi la metafora, poi la nota a margine (simpatica).
-export type ConceptId = 'autenticazione' | 'password' | 'rete' | 'switch' | 'pacchetto' | 'ip' | 'router' | 'mac' | 'inventario'
+export type ConceptId = 'ping' | 'autenticazione' | 'password' | 'rete' | 'switch' | 'pacchetto' | 'ip' | 'router' | 'mac' | 'inventario'
 
 export interface Concept {
   title: string
@@ -10,9 +10,20 @@ export interface Concept {
   margin: string
 }
 
-export const CONCEPT_ORDER: ConceptId[] = ['autenticazione', 'password', 'rete', 'switch', 'pacchetto', 'ip', 'router', 'mac', 'inventario']
+export const CONCEPT_ORDER: ConceptId[] = ['ping', 'autenticazione', 'password', 'rete', 'switch', 'pacchetto', 'ip', 'router', 'mac', 'inventario']
 
 export const CONCEPTS: Record<ConceptId, Concept> = {
+  ping: {
+    title: 'Ping',
+    tab: 'Ping',
+    short: 'Un messaggio di prova: "ci sei?"',
+    body: [
+      'Il ping manda un piccolo messaggio a un dispositivo e aspetta la risposta. Se risponde, è acceso e raggiungibile; se no, qualcosa non va: spento, bloccato o scollegato.',
+      'È il primo controllo di ogni tecnico: prima di riparare, verifica chi risponde.',
+    ],
+    analogy: 'Bussare a una porta: se qualcuno risponde, in casa c\'è.',
+    margin: 'Nove volte su dieci la stampante "rotta" era solo addormentata.',
+  },
   autenticazione: {
     title: 'Autenticazione',
     tab: 'Accesso',

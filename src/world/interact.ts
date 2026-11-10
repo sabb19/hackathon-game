@@ -13,6 +13,7 @@ const beforeLock = (step: Parameters<typeof stepIndex>[0]) => stepIndex(step) < 
 export type InteractId =
   | 'computer' | 'postit' | 'door' | 'display' | 'adaDesk' | 'adaPhoto' | 'whiteboard' | 'rack' | 'cabinet' | 'window' | 'cooler'
   | 'board' | 'coffee' | 'adaBox'
+  | 'lightSwitch'
   | 'door_ada' | 'door_server' | 'door_tech' | 'door_meeting' | 'door_teo' | 'door_exit'
 
 const DOOR_IDS = ['door_ada', 'door_server', 'door_tech', 'door_meeting', 'door_teo', 'door_exit'] as const
@@ -42,7 +43,7 @@ export function promptFor(id: InteractId): string | null {
   const p = useGame.getState().progress
   if (!p) return null
   switch (id) {
-    case 'computer': return beforeLock(p.step) ? 'Guarda lo schermo' : 'Siediti al computer'
+    case 'computer': return p.step === 'm0_watch' ? 'Siediti alla postazione' : beforeLock(p.step) ? 'Guarda lo schermo' : 'Siediti al computer'
     case 'postit': return 'Guarda il post-it'
     case 'door': return p.step === 'm0_coffee' || p.step === 'm0_stairs' ? 'Passa il badge' : 'Guarda il lettore badge'
     case 'display': return 'Guarda il display'
@@ -56,6 +57,7 @@ export function promptFor(id: InteractId): string | null {
     case 'board': return 'Guarda la bacheca'
     case 'coffee': return 'Guarda la macchina del caffè'
     case 'adaBox': return 'Guarda lo scatolone'
+    case 'lightSwitch': return p.step === 'm0_ada' && !p.flags.archiveDark ? 'Spegni le luci' : null
     default:
       return isDoorHit(id) && !doorOpen(id.slice(5) as never, p.step) ? 'Porta chiusa' : null
   }
@@ -70,7 +72,7 @@ export function interact(id: InteractId) {
 
   switch (id) {
     case 'computer':
-      if (beforeLock(step)) return inspectAt('computer')
+      if (beforeLock(step) && step !== 'm0_watch') return inspectAt('computer')
       g.setView('desktop')
       return
     case 'postit':
@@ -111,6 +113,18 @@ export function interact(id: InteractId) {
       return
     case 'cooler':
       sfx.rattle(0, 0.6)
+      return
+    case 'lightSwitch':
+      if (step !== 'm0_ada' || p.flags.archiveDark) return
+      sfx.click()
+      g.setFlag('archiveDark')
+      g.say('teo', "Grazie. Lo scatolone accanto alla stampante è di Ada: le sue cose, mai ritirate. E dietro il vetro c'è il suo ufficio, rimasto com'era.")
+      g.say('teo', 'Ok, adesso è tutto tuo. Io vado a dormire. Buon turno!')
+      // il turno scorre: salto di tempo fino alle 23:44
+      setTimeout(() => {
+        const s = useGame.getState()
+        if (s.progress?.step === 'm0_ada') s.setTimeSkip(performance.now())
+      }, 7000)
       return
     case 'coffee':
       // il cartello GUASTA si legge da vicino: la macchinetta buona è al B1

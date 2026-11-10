@@ -2,6 +2,8 @@ import type { ChatMsg } from '../store/game'
 
 export type StepId =
   | 'm0_arrive'
+  | 'm0_watch'
+  | 'm0_ada'
   | 'm0_coffee'
   | 'm0_stairs'
   | 'm0_login'
@@ -28,6 +30,18 @@ export const STEPS: Record<StepId, Step> = {
     goal: 'Raggiungi la tua postazione',
     objective: "Sei appena uscito/a dall'ascensore. La tua scrivania è nell'open space, in prima fila: quella con la lampada accesa.",
     hints: ["Entra nell'open space dal varco davanti agli ascensori: la tua scrivania ha la lampada accesa."],
+  },
+  m0_watch: {
+    chapter: 'Prologo — 20:47',
+    goal: 'Controlla le reti dei clienti',
+    objective: 'Siediti al PC: sullo schermo di sorveglianza vedi le reti di ambulatori e scuole. Se qualcosa diventa arancione, intervieni.',
+    hints: ['Clicca il tuo computer per sederti alla postazione.', "Clicca la rete arancione e segui i passi a destra: prima il ping, poi il riavvio."],
+  },
+  m0_ada: {
+    chapter: 'Prologo — 21:30',
+    goal: "Spegni le luci dell'archivio",
+    objective: "Teo ha visto dalle telecamere che le luci dell'archivio sono rimaste accese. L'interruttore è all'ingresso dell'archivio, a ovest dell'open space.",
+    hints: ["L'archivio è oltre il varco nella parete ovest dell'open space, accanto all'ufficio di Ada. L'interruttore è sul muro, entrando a sinistra."],
   },
   m0_coffee: {
     chapter: 'Prologo — 23:44',
@@ -117,13 +131,15 @@ export const STEPS: Record<StepId, Step> = {
   end: { chapter: 'Fine della demo', goal: 'Fine della demo', objective: 'Fine della demo.', hints: [] },
 }
 
-export const STEP_ORDER: StepId[] = ['m0_arrive', 'm0_coffee', 'm0_stairs', 'm0_login', 'm0_password', 'm1_lab', 'm1_plug', 'm1_verify', 'm2_monitor', 'm2_locate', 'end']
+export const STEP_ORDER: StepId[] = ['m0_arrive', 'm0_watch', 'm0_ada', 'm0_coffee', 'm0_stairs', 'm0_login', 'm0_password', 'm1_lab', 'm1_plug', 'm1_verify', 'm2_monitor', 'm2_locate', 'end']
 export const stepIndex = (s: StepId) => STEP_ORDER.indexOf(s)
 
 // Dove deve andare il giocatore adesso (per l'indicatore nel mondo). null = al computer / nessun bersaglio.
 export function targetFor(step: StepId, flags: Record<string, boolean>): string | null {
   switch (step) {
     case 'm0_arrive': return 'computer'
+    case 'm0_watch': return 'computer'
+    case 'm0_ada': return flags.archiveDark ? null : 'lightSwitch'
     case 'm0_coffee': return 'coffee'
     case 'm0_stairs': return 'door'
     case 'm0_login': return flags.notebook ? 'computer' : 'adaDesk'

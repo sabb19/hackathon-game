@@ -10,6 +10,9 @@ import { GameNotebook } from './ui/Notebook'
 import { NoteModal, Toast } from './ui/Overlays'
 import { useGlobalKeys } from './ui/useGlobalKeys'
 import Desktop from './os/Desktop'
+import Watch from './os/Watch'
+import ChapterCard from './ui/ChapterCard'
+import { stepIndex } from './content/steps'
 import Loading from './ui/Loading'
 import Notification from './ui/Notification'
 import VideoCall, { TimeSkip } from './ui/VideoCall'
@@ -23,6 +26,8 @@ export default function App() {
   const overlay = useGame((s) => s.phoneOpen || s.notebookOpen || !!s.call || !!s.timeSkip)
   const bigText = useGame((s) => s.settings.bigText)
   const inGame = screen === 'game'
+  // prima del lockdown il PC mostra solo la console di sorveglianza
+  const prologue = useGame((s) => !!s.progress && stepIndex(s.progress.step) < stepIndex('m0_login'))
   const callOrSkip = useGame((s) => !!s.call || !!s.timeSkip)
   useGlobalKeys()
 
@@ -35,8 +40,9 @@ export default function App() {
       {screen === 'title' && <TitleScreen />}
       {screen === 'intro' && <Intro />}
       {inGame && view === 'world' && <Hud />}
-      {inGame && view === 'desktop' && <Desktop />}
-      {inGame && !callOrSkip && <Phone />}
+      {inGame && view === 'desktop' && (prologue ? <Watch /> : <Desktop />)}
+      {inGame && <ChapterCard />}
+      {inGame && !callOrSkip && !(prologue && view === 'desktop') && <Phone />}
       {inGame && <Notification />}
       {inGame && <GameNotebook />}
       {inGame && <VideoCall />}

@@ -74,7 +74,7 @@ export const DOORS: DoorDef[] = [
 
 // ---- posizioni chiave ----
 export const PLAYER_DESK = { x: 1, z: 5 } // la tua postazione (prima fila, rivolta a nord)
-export const ARRIVE: V3 = [1.2, 1.6, 10.0] // appena uscito/a dall'ascensore
+export const ARRIVE: V3 = [0, 1.6, 9.7] // appena uscito/a dall'ascensore
 export const START: V3 = [PLAYER_DESK.x, 1.6, PLAYER_DESK.z + 1.6]
 export const TITLE_POS: V3 = [PLAYER_DESK.x + 0.55, 1.5, PLAYER_DESK.z + 1.0]
 export const TITLE_LOOK: V3 = [PLAYER_DESK.x, 0.8, PLAYER_DESK.z + 0.1]
@@ -84,7 +84,8 @@ export const RACK_B = { x: 3, z: -10.6 } // fila nord della sala server, rivolta
 export const CABINET = { x: -3, z: -11.4 } // armadio di SANDBOX-7 nel locale tecnico
 export const KITCHEN = { x: 13.65, z: 5 }
 export const BOARD = { x: -11, z: 2.08 } // bacheca nell'archivio
-export const ADA_BOX = { x: -12.6, z: 3.1 }
+export const ADA_BOX = { x: -10.4, z: 7.45 } // accanto alla stampante, mai ritirato
+export const LIGHT_SWITCH: V3 = [-8.085, 1.2, 3.5] // interruttore dell'archivio (lato archivio del muro x=-8)
 export const WHITEBOARD = { x: -5, z: 7.92 }
 
 // Verso dove si gira la camera nel lockdown (dalla porta delle scale verso le finestre del corridoio)
@@ -103,7 +104,7 @@ export const VIEWS: Record<string, { pos: V3; look: V3 }> = {
   cabinet: { pos: [CABINET.x - 0.1, 1.3, -10.0], look: [CABINET.x, 0.75, -11.2] },
   board: { pos: [BOARD.x, 1.5, 3.2], look: [BOARD.x, 1.5, BOARD.z] },
   coffee: { pos: [12.4, 1.5, 4.55], look: [13.6, 1.25, 4.55] },
-  adaBox: { pos: [ADA_BOX.x, 1.25, ADA_BOX.z + 1.0], look: [ADA_BOX.x, 0.25, ADA_BOX.z] },
+  adaBox: { pos: [ADA_BOX.x, 1.3, ADA_BOX.z - 1.0], look: [ADA_BOX.x, 0.25, ADA_BOX.z] },
 }
 
 // Punto dove si posa l'indicatore/la luce guida per ogni bersaglio
@@ -114,6 +115,7 @@ export const TARGET_POINT: Record<string, V3> = {
   rack: [RACK_B.x, 1.6, -10.2],
   cabinet: [CABINET.x, 1.2, -11.1],
   coffee: [13.6, 1.3, 4.55],
+  lightSwitch: [-8.15, 1.25, 3.5],
 }
 
 // Finestre (per serrande, veneziane, vetri): centro e orientamento

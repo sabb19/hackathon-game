@@ -89,7 +89,7 @@ function Call({ id, name }: { id: CallId; name: string }) {
     for (const l of lines) g.log(l.who, l.text)
     sfx.click()
     g.setCall(null)
-    if (id === 'handover') g.setTimeSkip(performance.now())
+    if (id === 'handover') g.goto('m0_watch')
     lockPointer()
   }
   const ended = node >= nodes.length
